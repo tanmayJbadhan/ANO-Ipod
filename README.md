@@ -5,6 +5,11 @@ music from a microSD card through a hi-fi DAC, has a racing game, and lets you a
 songs from your phone over WiFi — all wrapped in a "liquid glass" theme with
 Jigglypuff on the home screen.
 
+<p align="center">
+  <img src="07_Images/home-screen.png" width="45%" alt="Home screen">
+  <img src="07_Images/music-player.png" width="42%" alt="Music player">
+</p>
+
 ## Flashing it
 
 1. Plug the console into the PC with a USB-C data cable and switch it on.
@@ -55,6 +60,8 @@ on the same WiFi.
 | [`4_Games/`](4_Games/) | *Lullaby Run*, an 11-district racer: renderer, game logic and procedural engine sound, plus a browser preview. |
 | [`5_Web_Uploader/`](5_Web_Uploader/) | WiFi, the phone upload page, and clock sync. |
 | [`6_Theme_Graphics/`](6_Theme_Graphics/) | The glass look, the landscape screen rotation, and the Jigglypuff artwork with the tool that converts it. |
+| [`07_Images/`](07_Images/) | Photos of the finished console. |
+| [`08_BOM/`](08_BOM/) | Bill of materials, wiring diagram and the 3D-printable case (STL). |
 | `libraries/` | Third-party libraries the build uses (display, touch/charger driver, audio decoder — patched, see 3_Music_App, and LVGL for the examples). |
 | `boards/` | PlatformIO board definition for the 16 MB ESP32-S3. |
 | `platformio.ini` | Build settings; stitches folders 2–6 into one firmware. |
@@ -71,7 +78,9 @@ Each folder has its own README explaining its files.
 - Waveshare PCM5122 DAC HAT (I²S) — wired earbuds
 - microSD card on SPI
 
-Pin map and wire colours: [`2_Firmware/hardware/wiring-diagram.html`](2_Firmware/hardware/wiring-diagram.html).
+- 2700 mAh LiPo, M2 inserts and screws, 3D-printed case
+
+Full parts list, pin map with wire colours, and case files: [`08_BOM/`](08_BOM/).
 
 ## WiFi setup
 

@@ -1,0 +1,7 @@
+1. lilyGO T display 1.64"
+2. SD acrd reader Adafruit
+3. ANO adafruit
+4. 128 GB SD card
+5. PCM
+6. bATTERY 2700 MAH 
+7. M2 threaded insertes and screws

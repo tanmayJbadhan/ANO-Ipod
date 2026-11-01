@@ -9,7 +9,7 @@ The console's main program and the parts every feature depends on.
 | `TouchInput.*` | The FT3168 touch screen. |
 | `BatteryMonitor.*` | The SY6970 charger: battery level, charging, and the 5 V boost that powers the DAC on battery. Includes the checks that stop the boost blocking charging when USB is plugged in. |
 | `partitions.csv` | How the 16 MB flash is split up. |
-| `hardware/` | Wiring diagram with wire colours, board schematic (PDF), chip datasheets, and the board's 3D model. |
+| `hardware/` | Board schematic (PDF), chip datasheets, and the board's 3D model. The wiring diagram is in [`08_BOM/`](../08_BOM/). |
 
 Its sibling folders `3_Music_App` … `6_Theme_Graphics` are compiled together with
 this one into a single firmware (see `../platformio.ini`).

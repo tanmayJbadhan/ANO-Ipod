@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 900" width="1000" height="900" font-family="system-ui, -apple-system, Segoe UI, sans-serif">
+<rect width="1000" height="900" fill="#ffffff"/>
+<text x="500" y="38" text-anchor="middle" font-size="22" font-weight="700" fill="#15241f">Jigglypuff wiring</text>
+<text x="500" y="62" text-anchor="middle" font-size="13" fill="#55685f">PCM5122 DAC on the left header, microSD on the right. Positions counted from the bottom (USB-C end).</text>
+<rect x="402" y="96" width="196" height="610" rx="16" fill="#e3eae7" stroke="#9aa69f" stroke-width="2"/>
+<text x="500" y="122" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#55685f">T-DISPLAY-S3 AMOLED 1.64</text>
+<rect x="440" y="150" width="120" height="140" rx="8" fill="#d2ded8"/>
+<text x="500" y="225" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#55685f">ESP32-S3</text>
+<rect x="452" y="640" width="96" height="44" rx="6" fill="#d2ded8"/>
+<text x="500" y="666" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="10" fill="#55685f">USB-C</text>
+<circle cx="416" cy="140" r="5" fill="#9aa69f"/>
+<text x="436" y="143" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">13</text>
+<g opacity="0.4"><rect x="296" y="127" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="346" y="144" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO1</text></g>
+<circle cx="416" cy="182" r="5" fill="#9aa69f"/>
+<text x="436" y="185" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">12</text>
+<g opacity="1"><rect x="296" y="169" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="346" y="186" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">SCL · 6</text></g>
+<line x1="292" y1="182" x2="214" y2="182" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="182" r="7" fill="#2e9b57" stroke="#9aa69f"/>
+<text x="192" y="186" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">SCL · green</text>
+<circle cx="416" cy="224" r="5" fill="#9aa69f"/>
+<text x="436" y="227" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">11</text>
+<g opacity="1"><rect x="296" y="211" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="346" y="228" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">SDA · 7</text></g>
+<line x1="292" y1="224" x2="214" y2="224" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="224" r="7" fill="#d93b3b" stroke="#9aa69f"/>
+<text x="192" y="228" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">SDA · red</text>
+<circle cx="416" cy="266" r="5" fill="#9aa69f"/>
+<text x="436" y="269" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">10</text>
+<g opacity="0.4"><rect x="296" y="253" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="346" y="270" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO2</text></g>
+<circle cx="416" cy="308" r="5" fill="#9aa69f"/>
+<text x="436" y="311" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">9</text>
+<g opacity="0.4"><rect x="296" y="295" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="346" y="312" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO3</text></g>
+<circle cx="416" cy="350" r="5" fill="#9aa69f"/>
+<text x="436" y="353" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">8</text>
+<g opacity="0.4"><rect x="296" y="337" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="346" y="354" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO5</text></g>
+<circle cx="416" cy="392" r="5" fill="#9aa69f"/>
+<text x="436" y="395" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">7</text>
+<g opacity="0.4"><rect x="296" y="379" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="346" y="396" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO18</text></g>
+<circle cx="416" cy="434" r="5" fill="#9aa69f"/>
+<text x="436" y="437" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">6</text>
+<g opacity="1"><rect x="296" y="421" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="346" y="438" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO21</text></g>
+<line x1="292" y1="434" x2="214" y2="434" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="434" r="7" fill="#e8c33a" stroke="#9aa69f"/>
+<text x="192" y="438" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">DIN · yellow</text>
+<circle cx="416" cy="476" r="5" fill="#9aa69f"/>
+<text x="436" y="479" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">5</text>
+<g opacity="1"><rect x="296" y="463" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="346" y="480" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO47</text></g>
+<line x1="292" y1="476" x2="214" y2="476" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="476" r="7" fill="#e07b2c" stroke="#9aa69f"/>
+<text x="192" y="480" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">BCK · orange</text>
+<circle cx="416" cy="518" r="5" fill="#9aa69f"/>
+<text x="436" y="521" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">4</text>
+<g opacity="1"><rect x="296" y="505" width="100" height="26" rx="7" fill="#15241f" stroke="#15241f" stroke-width="2"/><text x="346" y="522" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#ffffff">GND</text></g>
+<line x1="292" y1="518" x2="214" y2="518" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="518" r="7" fill="#1a1a1a" stroke="#9aa69f"/>
+<text x="192" y="522" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">GND · black</text>
+<circle cx="416" cy="560" r="5" fill="#9aa69f"/>
+<text x="436" y="563" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">3</text>
+<g opacity="1"><rect x="296" y="547" width="100" height="26" rx="7" fill="#f6dede" stroke="#b23b3b" stroke-width="2"/><text x="346" y="564" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#b23b3b">VBUS</text></g>
+<line x1="292" y1="560" x2="214" y2="560" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="560" r="7" fill="#f09a9a" stroke="#9aa69f"/>
+<text x="192" y="564" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">5V · light red</text>
+<circle cx="416" cy="602" r="5" fill="#9aa69f"/>
+<text x="436" y="605" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">2</text>
+<g opacity="0.4"><rect x="296" y="589" width="100" height="26" rx="7" fill="#f6dede" stroke="#b23b3b" stroke-width="1"/><text x="346" y="606" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#b23b3b">VBUS</text></g>
+<text x="290" y="606" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="11" fill="#9aa69f">same as pos 3, unused</text>
+<circle cx="416" cy="644" r="5" fill="#9aa69f"/>
+<text x="436" y="647" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">1</text>
+<g opacity="1"><rect x="296" y="631" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="346" y="648" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO48</text></g>
+<line x1="292" y1="644" x2="214" y2="644" stroke="#a85d1f" stroke-width="1.5"/>
+<circle cx="206" cy="644" r="7" fill="#2f6fd0" stroke="#9aa69f"/>
+<text x="192" y="648" text-anchor="end" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#a85d1f">LRCK · blue</text>
+<circle cx="584" cy="140" r="5" fill="#9aa69f"/>
+<text x="564" y="143" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">13</text>
+<g opacity="0.4"><rect x="604" y="127" width="100" height="26" rx="7" fill="#15241f" stroke="#15241f" stroke-width="1"/><text x="654" y="144" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#ffffff">GND</text></g>
+<circle cx="584" cy="182" r="5" fill="#9aa69f"/>
+<text x="564" y="185" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">12</text>
+<g opacity="0.4"><rect x="604" y="169" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="654" y="186" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO46</text></g>
+<circle cx="584" cy="224" r="5" fill="#9aa69f"/>
+<text x="564" y="227" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">11</text>
+<g opacity="0.4"><rect x="604" y="211" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="654" y="228" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO45</text></g>
+<circle cx="584" cy="266" r="5" fill="#9aa69f"/>
+<text x="564" y="269" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">10</text>
+<g opacity="0.4"><rect x="604" y="253" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="654" y="270" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO44</text></g>
+<circle cx="584" cy="308" r="5" fill="#9aa69f"/>
+<text x="564" y="311" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">9</text>
+<g opacity="0.4"><rect x="604" y="295" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="654" y="312" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO43</text></g>
+<circle cx="584" cy="350" r="5" fill="#9aa69f"/>
+<text x="564" y="353" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">8</text>
+<g opacity="0.4"><rect x="604" y="337" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="1"/><text x="654" y="354" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO42</text></g>
+<circle cx="584" cy="392" r="5" fill="#9aa69f"/>
+<text x="564" y="395" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">7</text>
+<g opacity="1"><rect x="604" y="379" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="654" y="396" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO41</text></g>
+<line x1="708" y1="392" x2="786" y2="392" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="392" r="7" fill="#1a1a1a" stroke="#9aa69f"/>
+<text x="808" y="396" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">black · CS (D3)</text>
+<circle cx="584" cy="434" r="5" fill="#9aa69f"/>
+<text x="564" y="437" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">6</text>
+<g opacity="1"><rect x="604" y="421" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="654" y="438" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO40</text></g>
+<line x1="708" y1="434" x2="786" y2="434" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="434" r="7" fill="#8e5cd9" stroke="#9aa69f"/>
+<text x="808" y="438" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">purple · MISO (D0)</text>
+<circle cx="584" cy="476" r="5" fill="#9aa69f"/>
+<text x="564" y="479" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">5</text>
+<g opacity="1"><rect x="604" y="463" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="654" y="480" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO39</text></g>
+<line x1="708" y1="476" x2="786" y2="476" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="476" r="7" fill="#9aa4ad" stroke="#9aa69f"/>
+<text x="808" y="480" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">grey · MOSI (CMD)</text>
+<circle cx="584" cy="518" r="5" fill="#9aa69f"/>
+<text x="564" y="521" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">4</text>
+<g opacity="1"><rect x="604" y="505" width="100" height="26" rx="7" fill="#15241f" stroke="#15241f" stroke-width="2"/><text x="654" y="522" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#ffffff">GND</text></g>
+<line x1="708" y1="518" x2="786" y2="518" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="518" r="7" fill="#f2f2f2" stroke="#9aa69f"/>
+<text x="808" y="522" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">white · GND</text>
+<circle cx="584" cy="560" r="5" fill="#9aa69f"/>
+<text x="564" y="563" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">3</text>
+<g opacity="1"><rect x="604" y="547" width="100" height="26" rx="7" fill="#f6dede" stroke="#b23b3b" stroke-width="2"/><text x="654" y="564" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#b23b3b">3V3</text></g>
+<line x1="708" y1="560" x2="786" y2="560" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="560" r="7" fill="#2f6fd0" stroke="#9aa69f"/>
+<text x="808" y="564" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">blue · 3V</text>
+<circle cx="584" cy="602" r="5" fill="#9aa69f"/>
+<text x="564" y="605" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">2</text>
+<g opacity="1"><rect x="604" y="589" width="100" height="26" rx="7" fill="#f6dede" stroke="#b23b3b" stroke-width="2" stroke-dasharray="4 3"/><text x="654" y="606" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#b23b3b">BAT</text></g>
+<line x1="708" y1="602" x2="786" y2="602" stroke="#b23b3b" stroke-width="1.5" stroke-dasharray="3 3"/>
+<text x="794" y="606" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" font-weight="600" fill="#b23b3b">no wire here</text>
+<circle cx="584" cy="644" r="5" fill="#9aa69f"/>
+<text x="564" y="647" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="9" fill="#9aa69f">1</text>
+<g opacity="1"><rect x="604" y="631" width="100" height="26" rx="7" fill="#f4f7f6" stroke="#d2ded8" stroke-width="2"/><text x="654" y="648" text-anchor="middle" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#55685f">GPIO38</text></g>
+<line x1="708" y1="644" x2="786" y2="644" stroke="#0f7a6c" stroke-width="1.5"/>
+<circle cx="794" cy="644" r="7" fill="#2e9b57" stroke="#9aa69f"/>
+<text x="808" y="648" font-family="ui-monospace, Menlo, Consolas, monospace" font-size="12" fill="#0f7a6c">green · CLK</text>
+<rect x="20" y="96" width="34" height="610" rx="11" fill="#f3e2cf" stroke="#a85d1f" stroke-width="1.5"/>
+<text x="37" y="401" text-anchor="middle" font-weight="700" font-size="13" fill="#a85d1f" transform="rotate(-90 37 401)">PCM5122 DAC · 7 wires · left header</text>
+<rect x="946" y="96" width="34" height="610" rx="11" fill="#d9ece7" stroke="#0f7a6c" stroke-width="1.5"/>
+<text x="963" y="401" text-anchor="middle" font-weight="700" font-size="13" fill="#0f7a6c" transform="rotate(-90 963 401)">microSD breakout · 6 wires · right header</text>
+<rect x="60" y="730" width="880" height="140" rx="12" fill="#f4f7f6" stroke="#d2ded8"/>
+<text x="84" y="760" font-size="14" font-weight="700" fill="#15241f">Plug-in connections (no soldering)</text>
+<text x="84" y="790" font-size="13" font-weight="600" fill="#15241f">ANO wheel</text>
+<text x="200" y="790" font-size="13" fill="#55685f">STEMMA QT cable into the board's left STEMMA QT port (same I2C bus as the DAC: SDA 7 / SCL 6)</text>
+<text x="84" y="816" font-size="13" font-weight="600" fill="#15241f">Battery</text>
+<text x="200" y="816" font-size="13" fill="#55685f">2700 mAh 1-cell LiPo into the board's battery JST connector (charged over USB-C)</text>
+<text x="84" y="842" font-size="13" font-weight="600" fill="#15241f">Headphones</text>
+<text x="200" y="842" font-size="13" fill="#55685f">wired earbuds into the PCM5122's 3.5 mm jack</text>
+</svg>
