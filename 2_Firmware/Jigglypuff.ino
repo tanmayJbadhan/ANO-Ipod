@@ -3,16 +3,20 @@
  * used in landscape (456x280 logical; see Landscape.h for why rotation is
  * done in software) with a "liquid glass" look (see Glass.h).
  *
- *   Home      three large glass tiles: Music, Games, Add songs
- *   Music     player for whatever is on the SD card
- *   Games     Lullaby Run, an 11-district racer (see LullabyRun.h)
- *   Add songs web page on the home WiFi that uploads straight to the card
+ *   Home        three large glass tiles: Music, Games, Add songs
+ *   Music       Artists / Albums / Playlists lists (see MusicBrowser.h)
+ *   Now playing the player for the queued songs
+ *   Games       Lullaby Run, an 11-district racer (see LullabyRun.h)
+ *   Add songs   web page on the home WiFi that uploads straight to the card
  *
  * Controls (ANO wheel):
- *   wheel / LEFT / RIGHT  move between tiles; in Music, wheel = volume and
- *                         LEFT/RIGHT = previous/next track
+ *   wheel / LEFT / RIGHT  move between tiles; in the Music lists, wheel =
+ *                         scroll and LEFT/RIGHT = page; in Now playing,
+ *                         wheel = volume, tap LEFT/RIGHT = previous/next
+ *                         song, hold LEFT/RIGHT = rewind/fast-forward
  *   SELECT                open / play-pause
- *   UP                    back to Home
+ *   DOWN                  on a song or in Now playing: add to playlist
+ *   UP                    back one step
  *   UP three times fast   screen off (music keeps playing); double-tap any
  *                         arrow or turn the wheel ~45 degrees to wake it
  *   hold DOWN + wheel     screen brightness
@@ -43,6 +47,9 @@
 #include "TimeSync.h"
 #include "Pcm5122.h"
 #include "MusicPlayer.h"
+#include "Library.h"
+#include "Playlists.h"
+#include "MusicBrowser.h"
 #include "SongUpload.h"
 #include "LullabyRun.h"
 #include "WifiConfig.h"
@@ -63,13 +70,18 @@ TouchInput touch;
 // State
 // ---------------------------------------------------------------------------
 
-enum class Screen { Home, Music, Games, AddSongs };
+enum class Screen { Home, Music, NowPlaying, Games, AddSongs };
 Screen screen = Screen::Home;
 
 int homeSel = 0;           // focused tile on Home
 bool musicActive = false;  // the user wants music playing (drives auto-advance)
 bool needsRedraw = true;
 uint32_t volumeShownUntil = 0;
+
+// Holding LEFT/RIGHT in Now playing scrubs through the song: the bar moves
+// while held and the jump happens on release.
+bool seeking = false;
+int32_t seekTarget = 0; // seconds
 
 // Screen brightness (hold DOWN and turn the wheel), kept across reboots.
 Preferences prefs;
@@ -119,6 +131,19 @@ void trackTitle(const char *path, char *out, size_t outLen, size_t maxChars) {
   }
 }
 
+// Copies s, cut to maxChars with "..." when it's longer.
+void clipText(const char *s, char *out, size_t outLen, size_t maxChars) {
+  size_t n = strlen(s);
+  if (n > maxChars && maxChars > 3) {
+    size_t keep = maxChars - 3;
+    if (keep + 4 > outLen) keep = outLen - 4;
+    memcpy(out, s, keep);
+    memcpy(out + keep, "...", 4);
+  } else {
+    strlcpy(out, s, outLen);
+  }
+}
+
 void formatTime(uint32_t sec, char *out, size_t len) {
   snprintf(out, len, "%lu:%02lu", (unsigned long)(sec / 60), (unsigned long)(sec % 60));
 }
@@ -160,10 +185,10 @@ void iconAdd(int16_t cx, int16_t cy, uint16_t c) {
 // Status bar
 // ---------------------------------------------------------------------------
 
-void drawStatusBar(bool showBack) {
-  // Left: "< Home" on sub-screens. (No WiFi indicator - WiFi is off
-  // everywhere except Add Songs, which shows its own status.)
-  if (showBack) text(24, 12, "< Home", 2, C_DIM);
+void drawStatusBar(const char *back) {
+  // Left: "< Home" (or "< Music") on sub-screens. (No WiFi indicator - WiFi
+  // is off everywhere except Add Songs, which shows its own status.)
+  if (back) text(24, 12, back, 2, C_DIM);
 
   // Centre: clock, or the volume/brightness while it's being changed.
   if (millis() < brightnessShownUntil) {
@@ -213,7 +238,7 @@ int16_t tileX(int i) { return (int16_t)((SCREEN_W - (3 * TILE_W + 2 * TILE_GAP))
 
 void drawHome() {
   Glass::background();
-  drawStatusBar(false);
+  drawStatusBar(nullptr);
 
   const char *labels[3] = {"Music", "Games", "Add songs"};
   const uint16_t tints[3] = {C_PINK, C_GREEN, C_BLUE};
@@ -234,9 +259,9 @@ void drawHome() {
   }
 
   // Now-playing pill, so music carries on visibly while browsing.
-  if (musicActive && MusicPlayer::trackCount() > 0) {
+  if (musicActive && MusicPlayer::queueLength() > 0) {
     char title[32], line[40];
-    trackTitle(MusicPlayer::trackPath(MusicPlayer::currentIndex()), title, sizeof(title), 22);
+    clipText(Library::track(MusicPlayer::currentTrack()).title, title, sizeof(title), 22);
     snprintf(line, sizeof(line), "%s %s", MusicPlayer::isPaused() ? "||" : ">", title);
     int16_t w = gfx->textWidth(line, 2) + 40;
     Glass::panel((SCREEN_W - w) / 2, 232, w, 32, 16, C_PINK, 70, 30);
@@ -248,12 +273,13 @@ void drawHome() {
 static const int16_t BTN_Y = 220;
 static const int16_t BTN_PREV_X = 262, BTN_PLAY_X = 318, BTN_NEXT_X = 374;
 
-void drawMusic() {
+// The Music lists (Artists / Albums / Playlists and their songs).
+void drawLibrary() {
   Glass::background();
-  drawStatusBar(true);
-  Glass::panel(24, 40, 408, 212, 28, C_NEUTRAL, 30, 40);
+  drawStatusBar("< Home");
+  Glass::panel(14, 38, 428, 236, 26, C_NEUTRAL, 30, 40);
 
-  if (!MusicPlayer::sdReady() || MusicPlayer::trackCount() == 0) {
+  if (!MusicPlayer::sdReady() || Library::count() == 0) {
     iconMusic(SCREEN_W / 2, 110, 12, C_DIM);
     textCenter(SCREEN_W / 2, 170, MusicPlayer::sdReady() ? "No songs yet" : "No SD card", 2, C_TEXT);
     textCenter(SCREEN_W / 2, 196,
@@ -261,6 +287,21 @@ void drawMusic() {
                1, C_DIM);
     return;
   }
+  MusicBrowser::draw();
+}
+
+void drawNowPlaying() {
+  Glass::background();
+  drawStatusBar("< Music");
+  Glass::panel(24, 40, 408, 212, 28, C_NEUTRAL, 30, 40);
+
+  if (MusicPlayer::queueLength() == 0) {
+    iconMusic(SCREEN_W / 2, 110, 12, C_DIM);
+    textCenter(SCREEN_W / 2, 170, "Nothing playing", 2, C_TEXT);
+    textCenter(SCREEN_W / 2, 196, "Pick a song from Artists, Albums or Playlists", 1, C_DIM);
+    return;
+  }
+  const Track &t = Library::track(MusicPlayer::currentTrack());
 
   // Artwork tile.
   Glass::panel(44, 60, 136, 136, 24, C_PINK, 160, 80);
@@ -268,7 +309,7 @@ void drawMusic() {
 
   // Title over up to two lines.
   char title[48];
-  trackTitle(MusicPlayer::trackPath(MusicPlayer::currentIndex()), title, sizeof(title), 34);
+  clipText(t.title, title, sizeof(title), 34);
   const size_t perLine = 18;
   if (strlen(title) > perLine) {
     char l1[20], l2[20];
@@ -280,19 +321,22 @@ void drawMusic() {
     l1[cut] = '\0';
     const char *rest = title + cut + (title[cut] == ' ' ? 1 : 0);
     snprintf(l2, sizeof(l2), "%.18s", rest);
-    text(200, 64, l1, 2, C_TEXT);
-    text(200, 86, l2, 2, C_TEXT);
+    text(200, 58, l1, 2, C_TEXT);
+    text(200, 78, l2, 2, C_TEXT);
   } else {
-    text(200, 72, title, 2, C_TEXT);
+    text(200, 66, title, 2, C_TEXT);
   }
 
-  char pos[24];
-  snprintf(pos, sizeof(pos), "%u of %u", (unsigned)(MusicPlayer::currentIndex() + 1),
-           (unsigned)MusicPlayer::trackCount());
-  text(200, 116, pos, 2, C_DIM);
+  char artist[24], line[48], album[28];
+  clipText(t.artist, artist, sizeof(artist), 17);
+  text(200, 102, artist, 2, C_DIM);
+  clipText(t.album, album, sizeof(album), 22);
+  snprintf(line, sizeof(line), "%s  -  %u of %u", album, (unsigned)(MusicPlayer::queuePos() + 1),
+           (unsigned)MusicPlayer::queueLength());
+  text(200, 126, line, 1, C_DIM);
 
-  // Progress.
-  uint32_t cur = MusicPlayer::currentTimeSec();
+  // Progress (follows the scrub position while LEFT/RIGHT is held).
+  uint32_t cur = seeking ? (uint32_t)seekTarget : MusicPlayer::currentTimeSec();
   uint32_t dur = MusicPlayer::durationSec();
   const int16_t px = 200, pw = 212, py = 150;
   gfx->fillRoundRect(px, py, pw, 6, 3, Glass::blend(C_FAINT, 0x0000, 60));
@@ -339,12 +383,12 @@ void drawMusic() {
     text(44, 214, "Speaker offline", 1, C_RED);
   }
 
-  textCenter(SCREEN_W / 2, 262, "UP home   SELECT play   LEFT/RIGHT skip   WHEEL volume", 1, C_DIM);
+  textCenter(SCREEN_W / 2, 262, "SELECT play  </> skip (hold: seek)  DOWN add to playlist  WHEEL vol", 1, C_DIM);
 }
 
 void drawGames() {
   Glass::background();
-  drawStatusBar(true);
+  drawStatusBar("< Home");
   Glass::panel(24, 40, 408, 212, 28, C_GREEN, 60, 40);
   iconGames(SCREEN_W / 2, 112, C_TEXT, Glass::blend(C_GREEN, 0x0000, 90));
   textCenter(SCREEN_W / 2, 158, "Games", 2, C_TEXT);
@@ -353,7 +397,7 @@ void drawGames() {
 
 void drawAddSongs() {
   Glass::background();
-  drawStatusBar(true);
+  drawStatusBar("< Home");
   Glass::panel(24, 40, 408, 212, 28, C_BLUE, 60, 40);
 
   iconAdd(84, 100, C_TEXT);
@@ -401,10 +445,13 @@ void render() {
   Glass::useHomeTheme(screen == Screen::Home);
   switch (screen) {
     case Screen::Home: drawHome(); break;
-    case Screen::Music: drawMusic(); break;
+    case Screen::Music: drawLibrary(); break;
+    case Screen::NowPlaying: drawNowPlaying(); break;
     case Screen::Games: drawGames(); break;
     case Screen::AddSongs: drawAddSongs(); break;
   }
+  MusicBrowser::drawPicker(); // "Add to playlist", when open
+  MusicBrowser::drawToast();
   gfx->flush();
   needsRedraw = false;
 }
@@ -462,11 +509,42 @@ void checkUsbAtTrackChange() {
 
 void ensureCard() {
   if (!MusicPlayer::sdReady()) MusicPlayer::beginSd();
-  if (MusicPlayer::sdReady() && MusicPlayer::trackCount() == 0) MusicPlayer::scanTracks();
 }
 
-void startMusic(size_t index) {
+// Shown while the library scan reads tags (only slow the first time, or
+// after lots of new songs - everything else comes from the card's cache).
+void scanProgress(uint32_t found, uint32_t tagsRead) {
+  Glass::background();
+  drawStatusBar(nullptr);
+  Glass::panel(78, 80, 300, 130, 28, C_PINK, 70, 50);
+  iconMusic(SCREEN_W / 2, 120, 8, C_TEXT);
+  textCenter(SCREEN_W / 2, 152, "Reading your music", 2, C_TEXT);
+  char line[40];
+  if (tagsRead > 0) snprintf(line, sizeof(line), "%lu songs  (%lu new)", (unsigned long)found, (unsigned long)tagsRead);
+  else snprintf(line, sizeof(line), "%lu songs", (unsigned long)found);
+  textCenter(SCREEN_W / 2, 180, line, 2, C_DIM);
+  gfx->flush();
+}
+
+// Mounts the card and (re)builds the library if it's new or songs changed.
+// Rescanning renumbers songs, so the queue and lists start over; it only
+// happens when nothing is playing (first open, or after Add songs).
+void ensureLibrary() {
+  ensureCard();
+  if (!MusicPlayer::sdReady()) return;
+  if (Library::ready() && !Library::dirty()) return;
+  MusicPlayer::stop();
+  musicActive = false;
+  MusicPlayer::clearQueue();
+  scanProgress(0, 0);
+  Library::scan(scanProgress);
+  Playlists::load();
+  MusicBrowser::reset();
+}
+
+void startMusic(uint16_t index) {
   if (MusicPlayer::playIndex(index)) musicActive = true;
+  seeking = false;
   powerAudioNow();
 }
 
@@ -475,8 +553,9 @@ void goHome() {
   if (screen == Screen::AddSongs) {
     SongUpload::stop();
     TimeSync::wifiOff(); // WiFi only lives while Add Songs is open
-    MusicPlayer::scanTracks(); // pick up whatever was just added
+    if (SongUpload::filesAdded() > 0) Library::markDirty(); // read the new songs next time
   }
+  seeking = false;
   screen = Screen::Home;
   needsRedraw = true;
 }
@@ -484,9 +563,7 @@ void goHome() {
 void openApp(int i) {
   if (i == 0) {
     screen = Screen::Music;
-    ensureCard();
-    // Opening Music starts playback if nothing is playing yet.
-    if (!musicActive && MusicPlayer::trackCount() > 0) startMusic(MusicPlayer::currentIndex());
+    ensureLibrary();
   } else if (i == 1) {
     screen = Screen::Games;
     // The engine sound needs the DAC, so the music stops for the race.
@@ -510,9 +587,9 @@ void openApp(int i) {
 }
 
 void playPause() {
-  if (MusicPlayer::trackCount() == 0) return;
+  if (MusicPlayer::queueLength() == 0) return;
   if (!musicActive) {
-    startMusic(MusicPlayer::currentIndex());
+    startMusic(MusicPlayer::queuePos());
   } else {
     MusicPlayer::togglePause();
     powerAudioNow(); // boost back on when resuming on battery
@@ -541,11 +618,52 @@ void changeBrightness(int delta) {
 }
 
 void skip(int dir) {
-  if (MusicPlayer::trackCount() == 0) return;
+  if (MusicPlayer::queueLength() == 0) return;
   checkUsbAtTrackChange();
   bool ok = dir > 0 ? MusicPlayer::next() : MusicPlayer::previous();
   if (ok) musicActive = true;
   powerAudioNow();
+  needsRedraw = true;
+}
+
+// Scrubbing: each auto-repeat of a held LEFT/RIGHT (every ~120 ms) moves
+// the target 2 s, then 6 s once it's been held for 2 s.
+static uint32_t seekKeyDownAt = 0;
+
+void seekStep(int dir) {
+  uint32_t dur = MusicPlayer::durationSec();
+  if (!musicActive || dur == 0) return;
+  if (!seeking) {
+    seeking = true;
+    seekTarget = (int32_t)MusicPlayer::currentTimeSec();
+  }
+  int32_t step = (millis() - seekKeyDownAt > 2000) ? 6 : 2;
+  seekTarget += dir * step;
+  if (seekTarget < 0) seekTarget = 0;
+  if (seekTarget > (int32_t)dur - 1) seekTarget = (int32_t)dur - 1;
+  needsRedraw = true;
+}
+
+void seekFinish() {
+  if (!seeking) return;
+  seeking = false;
+  MusicPlayer::seekTo((uint32_t)seekTarget);
+  needsRedraw = true;
+}
+
+// Acts on what the Music lists or the picker asked for.
+void browserAction(MusicBrowser::Action a) {
+  switch (a) {
+    case MusicBrowser::Action::None: return;
+    case MusicBrowser::Action::Redraw: break;
+    case MusicBrowser::Action::Exit: goHome(); return;
+    case MusicBrowser::Action::Play:
+      checkUsbAtTrackChange();
+      startMusic(MusicBrowser::playIndex());
+      screen = Screen::NowPlaying;
+      break;
+    case MusicBrowser::Action::ShowPlayer: screen = Screen::NowPlaying; break;
+  }
   needsRedraw = true;
 }
 
@@ -664,12 +782,11 @@ void setup() {
 
   TimeSync::begin();
 
-  if (MusicPlayer::beginSd()) {
-    Serial.printf("SD mounted, %u track(s)\n", (unsigned)MusicPlayer::scanTracks());
-  } else {
-    Serial.printf("SD not mounted: %s\n", MusicPlayer::lastError());
-  }
+  // The library itself is read the first time Music is opened.
+  if (MusicPlayer::beginSd()) Serial.println("SD mounted");
+  else Serial.printf("SD not mounted: %s\n", MusicPlayer::lastError());
   MusicPlayer::setVolume(17); // -14 dB: about the old default loudness
+  MusicBrowser::begin(gfx, {C_TEXT, C_DIM, C_FAINT, C_PINK, C_GREEN, C_BLUE, C_RED, C_NEUTRAL});
 
   screen = Screen::Home;
   render();
@@ -777,14 +894,28 @@ void handleKey(const InputEvent &ev) {
     handleGameKey(ev);
     return;
   }
+  bool picker = MusicBrowser::pickerOpen();
+  bool leftRight = ev.key == Key::Left || ev.key == Key::Right;
+
+  // Auto-repeat while held: LEFT/RIGHT scrub in Now playing and page
+  // through the lists. Every other button acts once per press.
+  if (ev.repeat) {
+    if (!leftRight || picker) return;
+    if (screen == Screen::NowPlaying) seekStep(ev.key == Key::Right ? 1 : -1);
+    else if (screen == Screen::Music) browserAction(MusicBrowser::key(ev.key));
+    return;
+  }
+
   if (ev.key == Key::Select) {
     if (ev.pressed) {
       selectPressedAt = millis();
       selectArmed = true;
     } else if (selectArmed) {
       selectArmed = false;
-      if (screen == Screen::Home) openApp(homeSel);
-      else if (screen == Screen::Music) playPause();
+      if (picker) browserAction(MusicBrowser::pickerKey(Key::Select));
+      else if (screen == Screen::Home) openApp(homeSel);
+      else if (screen == Screen::Music) browserAction(MusicBrowser::key(Key::Select));
+      else if (screen == Screen::NowPlaying) playPause();
     }
     return;
   }
@@ -796,10 +927,31 @@ void handleKey(const InputEvent &ev) {
       downUsedForBrightness = false;
     } else if (downUsedForBrightness) {
       prefs.putInt("bright", brightness); // save once, not every click
+    } else if (picker) {
+      browserAction(MusicBrowser::pickerKey(Key::Down));
     } else if (screen == Screen::Music) {
-      changeVolume(-1);
+      browserAction(MusicBrowser::down());
+    } else if (screen == Screen::NowPlaying) {
+      MusicBrowser::openPicker(MusicPlayer::currentTrack());
+      needsRedraw = true;
     }
+    return;
   }
+
+  // LEFT/RIGHT in Now playing: a tap skips (on release, once it's clear it
+  // wasn't a hold), a hold scrubs and jumps on release.
+  if (screen == Screen::NowPlaying && leftRight && !picker) {
+    if (ev.pressed) {
+      seekKeyDownAt = millis();
+      resetTaps();
+    } else if (seeking) {
+      seekFinish();
+    } else {
+      skip(ev.key == Key::Right ? 1 : -1);
+    }
+    return;
+  }
+
   if (!ev.pressed) return;
 
   if (ev.key == Key::Up) {
@@ -809,19 +961,27 @@ void handleKey(const InputEvent &ev) {
       sleepDisplay();
       return;
     }
-    if (screen != Screen::Home) goHome();
+    if (picker) browserAction(MusicBrowser::pickerKey(Key::Up));
+    else if (screen == Screen::Music) browserAction(MusicBrowser::key(Key::Up));
+    else if (screen == Screen::NowPlaying) { screen = Screen::Music; needsRedraw = true; }
+    else if (screen != Screen::Home) goHome();
     return;
   }
   resetTaps();
 
+  if (picker) {
+    browserAction(MusicBrowser::pickerKey(ev.key));
+    return;
+  }
   switch (screen) {
     case Screen::Home:
       if (ev.key == Key::Left && homeSel > 0) { homeSel--; needsRedraw = true; }
       if (ev.key == Key::Right && homeSel < 2) { homeSel++; needsRedraw = true; }
       break;
     case Screen::Music:
-      if (ev.key == Key::Left) skip(-1);
-      if (ev.key == Key::Right) skip(+1);
+      browserAction(MusicBrowser::key(ev.key));
+      break;
+    case Screen::NowPlaying:
       break;
     case Screen::Games:
     case Screen::AddSongs:
@@ -835,8 +995,15 @@ void handleTouch() {
   int16_t x, y;
   gfx->touchToLandscape(touch.x(), touch.y(), x, y);
 
+  if (MusicBrowser::pickerOpen()) {
+    browserAction(MusicBrowser::pickerTap(x, y));
+    return;
+  }
+
+  // "< Home" / "< Music" in the top-left corner.
   if (screen != Screen::Home && y < 40 && x < 140) {
-    goHome();
+    if (screen == Screen::NowPlaying) { screen = Screen::Music; needsRedraw = true; }
+    else goHome();
     return;
   }
 
@@ -849,6 +1016,8 @@ void handleTouch() {
       }
     }
   } else if (screen == Screen::Music) {
+    browserAction(MusicBrowser::tap(x, y));
+  } else if (screen == Screen::NowPlaying) {
     auto near = [&](int16_t cx, int16_t r) {
       int16_t dx = x - cx, dy = y - BTN_Y;
       return dx * dx + dy * dy <= r * r;
@@ -859,20 +1028,53 @@ void handleTouch() {
   }
 }
 
+// The wheel: tile focus on Home, scrolling in the Music lists and the
+// picker, volume in Now playing; with DOWN held, brightness everywhere.
+void handleWheel(int32_t delta) {
+  static int32_t wheelAcc = 0;
+  if (delta == 0) return;
+  if (input.held(Key::Down)) {
+    downUsedForBrightness = true;
+    changeBrightness(delta > 0 ? 1 : -1);
+  } else if (MusicBrowser::pickerOpen()) {
+    browserAction(MusicBrowser::pickerWheel(delta));
+  } else if (screen == Screen::Home) {
+    wheelAcc += delta;
+    while (wheelAcc >= 2) { wheelAcc -= 2; if (homeSel < 2) homeSel++; needsRedraw = true; }
+    while (wheelAcc <= -2) { wheelAcc += 2; if (homeSel > 0) homeSel--; needsRedraw = true; }
+  } else if (screen == Screen::Music) {
+    browserAction(MusicBrowser::wheel(delta));
+  } else if (screen == Screen::NowPlaying) {
+    changeVolume(delta > 0 ? 1 : -1);
+  }
+}
+
 // Bench commands over USB serial, for testing without hands on the
-// buttons: g = open the game, h = Home, s/u/d/l/r = tap a button in it.
+// buttons: g = open the game, m = open Music, h = Home, s/u/d/l/r = tap a
+// button, L/R = hold LEFT/RIGHT for ~1.5 s, +/- = turn the wheel a click.
 void serialCommands() {
   if (!Serial.available()) return;
   char c = Serial.read();
+  Key k = c == 's' ? Key::Select : c == 'u' ? Key::Up : c == 'd' ? Key::Down
+        : c == 'l' ? Key::Left : c == 'r' ? Key::Right : Key::None;
   if (c == 'g' && screen == Screen::Home) openApp(1);
+  else if (c == 'm' && screen == Screen::Home) openApp(0);
   else if (c == 'h') goHome();
   else if (gameActive()) {
-    Key k = c == 's' ? Key::Select : c == 'u' ? Key::Up : c == 'd' ? Key::Down
-          : c == 'l' ? Key::Left : c == 'r' ? Key::Right : Key::None;
     if (k != Key::None) {
       LullabyRun::key({k, true, false});
       LullabyRun::key({k, false, false});
     }
+  } else if (k != Key::None) {
+    handleKey({k, true, false});
+    handleKey({k, false, false});
+  } else if (c == 'L' || c == 'R') {
+    Key h = c == 'L' ? Key::Left : Key::Right;
+    handleKey({h, true, false});
+    for (int i = 0; i < 12; i++) handleKey({h, true, true});
+    handleKey({h, false, false});
+  } else if (c == '+' || c == '-') {
+    handleWheel(c == '+' ? 1 : -1);
   }
 }
 
@@ -905,7 +1107,7 @@ void loop() {
       }
       continue;
     }
-    if (!ev.repeat) handleKey(ev); // one action per press, even when held
+    handleKey(ev); // it decides which buttons act on auto-repeat
   }
 
   // Switch off as soon as SELECT has been held long enough.
@@ -920,8 +1122,6 @@ void loop() {
     handleTouch(); // the game reads touch itself
   }
 
-  // The wheel: tile focus on Home, volume in Music.
-  static int32_t wheelAcc = 0;
   int32_t delta = input.encoderDelta();
   if (displayAsleep) {
     // A real turn (~45°) wakes the screen; a nudge from an arrow press doesn't.
@@ -934,19 +1134,8 @@ void loop() {
     if (!displayAsleep) LullabyRun::frame(input, touch, delta);
     delta = 0;
   }
-  if (delta != 0 && input.held(Key::Down)) {
-    // Holding DOWN turns the wheel into a brightness dial, on any screen.
-    downUsedForBrightness = true;
-    changeBrightness(delta > 0 ? 1 : -1);
-  } else if (delta != 0) {
-    if (screen == Screen::Home) {
-      wheelAcc += delta;
-      while (wheelAcc >= 2) { wheelAcc -= 2; if (homeSel < 2) homeSel++; needsRedraw = true; }
-      while (wheelAcc <= -2) { wheelAcc += 2; if (homeSel > 0) homeSel--; needsRedraw = true; }
-    } else if (screen == Screen::Music) {
-      changeVolume(delta > 0 ? 1 : -1);
-    }
-  }
+  handleWheel(delta);
+  if (MusicBrowser::toastEnded()) needsRedraw = true;
 
   if (screen == Screen::AddSongs) {
     if (!SongUpload::running()) SongUpload::start();
@@ -954,13 +1143,13 @@ void loop() {
   }
 
   static uint32_t lastTick = 0;
-  uint32_t tickEvery = (screen == Screen::Music || SongUpload::busy()) ? 1000 : 5000;
+  uint32_t tickEvery = (screen == Screen::NowPlaying || SongUpload::busy()) ? 1000 : 5000;
   if (millis() - lastTick >= tickEvery) {
     lastTick = millis();
 
     // Advance to the next track when one ends.
     if (musicActive && !MusicPlayer::isPaused() && !MusicPlayer::isRunning() &&
-        MusicPlayer::trackCount() > 0) {
+        MusicPlayer::queueLength() > 0 && !seeking) {
       checkUsbAtTrackChange();
       MusicPlayer::next();
     }

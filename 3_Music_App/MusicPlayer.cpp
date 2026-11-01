@@ -2,8 +2,8 @@
 #include "AudioConfig.h"
 #include "SdConfig.h"
 #include "Pcm5122.h"
+#include "Library.h"
 #include <Audio.h>
-#include <LittleFS.h>
 #include <SPI.h>
 #include <SD.h>
 #include <string.h>
@@ -39,30 +39,20 @@ static SemaphoreHandle_t audioMutex = nullptr;
 // isRunning() deliberately skips the lock: it reads a single bool, and
 // the task can hold this mutex through a blocking i2s_write, which the
 // once-a-second UI poll should never wait on.
-// TEMPORARY diagnostic: incremented every pass so the main loop can tell
-// whether the audio task is still being scheduled, or is wedged on the
-// mutex / inside a blocking i2s_write.
-static volatile uint32_t s_taskTicks = 0;
-
 static void audioTaskFn(void *) {
   for (;;) {
     if (xSemaphoreTake(audioMutex, portMAX_DELAY) == pdTRUE) {
       if (audio) audio->loop();
       xSemaphoreGive(audioMutex);
     }
-    s_taskTicks++;
     vTaskDelay(1);
   }
 }
-
-uint32_t MusicPlayer::debugTaskTicks() { return s_taskTicks; }
 
 uint32_t MusicPlayer::currentTimeSec() {
   if (!_i2sReady || !audio) return 0;
   return audio->getAudioCurrentTime();
 }
-
-uint32_t MusicPlayer::freeHeap() { return ESP.getFreeHeap(); }
 
 static Audio *createAudio() {
   void *mem = calloc(1, sizeof(Audio));
@@ -86,7 +76,6 @@ static Audio *createAudio() {
 // which nothing else on this board uses.
 static SPIClass sdSPI(HSPI);
 
-bool MusicPlayer::_fsReady = false;
 bool MusicPlayer::_sdReady = false;
 bool MusicPlayer::_i2sReady = false;
 bool MusicPlayer::_paused = false;
@@ -112,9 +101,9 @@ static void unmuteSoon() {
   s_unmuteAt = millis() + UNMUTE_DELAY_MS;
   if (s_unmuteAt == 0) s_unmuteAt = 1;
 }
-size_t MusicPlayer::_trackCount = 0;
-size_t MusicPlayer::_current = 0;
-char MusicPlayer::_tracks[MusicPlayer::MAX_TRACKS][MusicPlayer::MAX_PATH];
+uint16_t MusicPlayer::_queue[MusicPlayer::MAX_QUEUE];
+uint16_t MusicPlayer::_queueLen = 0;
+uint16_t MusicPlayer::_pos = 0;
 const char *MusicPlayer::_lastError = "";
 
 // The Audio library logs its own diagnostics through this weak-linked
@@ -130,94 +119,15 @@ void audio_info(const char *info) {
 // particular runs once per sample on the audio task, which is far too hot
 // a path to leave instrumented.
 
-bool MusicPlayer::begin() {
-  _fsReady = LittleFS.begin(true);
-  if (!_fsReady) {
-    _lastError = "LittleFS mount failed";
-  }
-  return _fsReady;
-}
-
 bool MusicPlayer::beginSd() {
   sdSPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
-  _sdReady = SD.begin(SD_CS_PIN, sdSPI);
+  // Room for 10 open files: the library scan holds one directory per
+  // folder level plus the song whose tags it is reading.
+  _sdReady = SD.begin(SD_CS_PIN, sdSPI, 4000000, "/sd", 10);
   if (!_sdReady) {
     _lastError = "SD.begin failed - check wiring/card";
   }
   return _sdReady;
-}
-
-bool MusicPlayer::play(const char *path) {
-  if (!_fsReady) {
-    _lastError = "LittleFS not mounted";
-    return false;
-  }
-  if (!LittleFS.exists(path)) {
-    _lastError = "file not found on LittleFS";
-    return false;
-  }
-  if (!_i2sReady) {
-    audio = createAudio();
-    if (!audio) { _lastError = "out of memory for decoder"; return false; }
-    audio->setPinout(I2S_BCLK_PIN, I2S_LRCLK_PIN, I2S_DOUT_PIN);
-    _i2sReady = true;
-  }
-  bool ok;
-  if (audioMutex) xSemaphoreTake(audioMutex, portMAX_DELAY);
-  ok = audio->connecttoFS(LittleFS, path);
-  if (ok) audio->setVolume(LIB_FULL_VOLUME);
-  if (audioMutex) xSemaphoreGive(audioMutex);
-
-  if (!ok) {
-    _lastError = "connecttoFS failed";
-    return false;
-  }
-  return true;
-}
-
-// Case-insensitive check for one of the extensions the Audio library can
-// decode. Keeps the scan from picking up artwork, playlists, or the
-// autorun files some cards ship with.
-static bool isPlayable(const char *name) {
-  const char *dot = strrchr(name, '.');
-  if (!dot) return false;
-  static const char *exts[] = {".mp3", ".wav", ".m4a", ".aac", ".flac"};
-  for (size_t i = 0; i < sizeof(exts) / sizeof(exts[0]); i++) {
-    if (strcasecmp(dot, exts[i]) == 0) return true;
-  }
-  return false;
-}
-
-bool MusicPlayer::firstTrackOnSd(char *out, size_t outLen) {
-  if (!_sdReady || !out || outLen < 2) return false;
-
-  File root = SD.open("/");
-  if (!root) {
-    _lastError = "cannot open SD root";
-    return false;
-  }
-
-  bool found = false;
-  for (File f = root.openNextFile(); f; f = root.openNextFile()) {
-    if (!f.isDirectory()) {
-      const char *name = f.name();
-      // Skip the dot-underscore resource forks macOS leaves behind -
-      // they carry a real audio extension but hold no audio.
-      if (isPlayable(name) && strncmp(name, "._", 2) != 0) {
-        // name() returns the bare filename on this core, so rebuild the
-        // absolute path connecttoFS() expects.
-        if (name[0] == '/') snprintf(out, outLen, "%s", name);
-        else snprintf(out, outLen, "/%s", name);
-        found = true;
-      }
-    }
-    f.close();
-    if (found) break;
-  }
-  root.close();
-
-  if (!found) _lastError = "no audio files on card";
-  return found;
 }
 
 bool MusicPlayer::playSd(const char *path) {
@@ -253,56 +163,40 @@ bool MusicPlayer::playSd(const char *path) {
   return true;
 }
 
-size_t MusicPlayer::scanTracks() {
-  _trackCount = 0;
-  if (!_sdReady) return 0;
-
-  File root = SD.open("/");
-  if (!root) {
-    _lastError = "cannot open SD root";
-    return 0;
-  }
-
-  for (File f = root.openNextFile(); f && _trackCount < MAX_TRACKS; f = root.openNextFile()) {
-    if (!f.isDirectory()) {
-      const char *name = f.name();
-      if (isPlayable(name) && strncmp(name, "._", 2) != 0) {
-        if (name[0] == '/') snprintf(_tracks[_trackCount], MAX_PATH, "%s", name);
-        else snprintf(_tracks[_trackCount], MAX_PATH, "/%s", name);
-        _trackCount++;
-      }
-    }
-    f.close();
-  }
-  root.close();
-
-  if (_trackCount == 0) _lastError = "no audio files on card";
-  return _trackCount;
+void MusicPlayer::setQueue(const uint16_t *ids, uint16_t n) {
+  if (n > MAX_QUEUE) n = MAX_QUEUE;
+  memcpy(_queue, ids, n * sizeof(uint16_t));
+  _queueLen = n;
+  _pos = 0;
 }
 
-const char *MusicPlayer::trackPath(size_t i) {
-  if (i >= _trackCount) return "";
-  return _tracks[i];
+void MusicPlayer::clearQueue() {
+  _queueLen = 0;
+  _pos = 0;
 }
 
-bool MusicPlayer::playIndex(size_t i) {
-  if (_trackCount == 0) {
-    _lastError = "playlist is empty";
+uint16_t MusicPlayer::currentTrack() {
+  return _queueLen ? _queue[_pos] : Library::NONE;
+}
+
+bool MusicPlayer::playIndex(uint16_t i) {
+  if (_queueLen == 0) {
+    _lastError = "nothing queued";
     return false;
   }
-  _current = i % _trackCount;
+  _pos = i % _queueLen;
   _paused = false;
-  return playSd(_tracks[_current]);
+  return playSd(Library::track(_queue[_pos]).path);
 }
 
 bool MusicPlayer::next() {
-  if (_trackCount == 0) return false;
-  return playIndex((_current + 1) % _trackCount);
+  if (_queueLen == 0) return false;
+  return playIndex((_pos + 1) % _queueLen);
 }
 
 bool MusicPlayer::previous() {
-  if (_trackCount == 0) return false;
-  return playIndex((_current + _trackCount - 1) % _trackCount);
+  if (_queueLen == 0) return false;
+  return playIndex((_pos + _queueLen - 1) % _queueLen);
 }
 
 bool MusicPlayer::togglePause() {
@@ -319,6 +213,22 @@ bool MusicPlayer::togglePause() {
 uint32_t MusicPlayer::durationSec() {
   if (!_i2sReady || !audio) return 0;
   return audio->getAudioFileDuration();
+}
+
+bool MusicPlayer::seekTo(uint32_t sec) {
+  // Duration is 0 whenever no file is open, so there's nothing to seek in.
+  // (Paused is fine: the jump takes effect on resume.) The library's own
+  // seek used to deadlock its decoder - see JIGGLYPUFF PATCH in setFilePos.
+  uint32_t dur = durationSec();
+  if (dur == 0) return false;
+  if (sec >= dur) sec = dur - 1;
+  Serial.printf("seek to %lu of %lu s\n", (unsigned long)sec, (unsigned long)dur);
+  if (!_paused) muteForChange(); // hide the jump
+  if (audioMutex) xSemaphoreTake(audioMutex, portMAX_DELAY);
+  bool ok = audio->setAudioPlayPosition((uint16_t)sec);
+  if (audioMutex) xSemaphoreGive(audioMutex);
+  if (!_paused) unmuteSoon();
+  return ok;
 }
 
 void MusicPlayer::stop() {

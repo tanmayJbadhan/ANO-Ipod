@@ -4220,12 +4220,18 @@ bool Audio::setTimeOffset(int sec){
 //---------------------------------------------------------------------------------------------------------------------
 bool Audio::setFilePos(uint32_t pos) {
     if(m_codec == CODEC_OPUS) return false; // not impl. yet
-    xSemaphoreTakeRecursive(mutex_audio, portMAX_DELAY);
+    // JIGGLYPUFF PATCH: no mutex here. mutex_audio is a plain mutex, but this
+    // took/gave it recursively; connecttoFS() takes it recursively and gives
+    // it plainly, leaving the recursion count at 1, so the give below never
+    // released it. The decoder task then blocked forever on its next loop()
+    // and the next seek or skip froze the console. (It also returned with
+    // the mutex held when no file was open.) Callers already serialise
+    // against Audio::loop() - see MusicPlayer's audioMutex - and this only
+    // stores one value for loop() to act on.
     if(!audiofile) return false;
     if(pos < m_audioDataStart) pos = m_audioDataStart; // issue #96
     if(pos > m_file_size) pos = m_file_size;
     m_resumeFilePos = pos;
-    xSemaphoreGiveRecursive(mutex_audio);
     return true;
 }
 //---------------------------------------------------------------------------------------------------------------------
@@ -5239,17 +5245,24 @@ uint32_t Audio::m4a_correctResumeFilePos(uint32_t resumeFilePos){
     } tu;
     tu uu;
 
+    // JIGGLYPUFF PATCH: read the sample-size table in blocks. One byte per
+    // read() meant ~40k reads for a 4-minute song, stalling the audio task
+    // (and anything waiting on it) for seconds on every seek.
+    (void)uu;
     uint32_t i = 0, pos = m_audioDataStart;
     audiofile.seek(m_stsz_position);
 
+    uint8_t blk[256];
     while(i < m_stsz_numEntries){
-        i++;
-        uu.u8[3] =  audiofile.read();
-        uu.u8[2] =  audiofile.read();
-        uu.u8[1] =  audiofile.read();
-        uu.u8[0] =  audiofile.read();
-        pos += uu.u32;
-        if(pos >= resumeFilePos) break;
+        uint32_t want = (m_stsz_numEntries - i) * 4;
+        if(want > sizeof(blk)) want = sizeof(blk);
+        int got = audiofile.read(blk, want);
+        if(got < 4) break;
+        for(int k = 0; k + 3 < got; k += 4){
+            i++;
+            pos += (uint32_t)blk[k] << 24 | blk[k + 1] << 16 | blk[k + 2] << 8 | blk[k + 3];
+            if(pos >= resumeFilePos) return pos;
+        }
     }
     return pos;
 }
@@ -5261,11 +5274,16 @@ uint32_t Audio::flac_correctResumeFilePos(uint32_t resumeFilePos){
     uint32_t pos = resumeFilePos;
     audiofile.seek(pos);
 
+    // JIGGLYPUFF PATCH: accept both frame sync codes (0xFFF8 fixed and
+    // 0xFFF9 variable block size) and stop at the end of the file. The
+    // original only knew 0xFFF8 and its loop condition never ended, so a
+    // variable-block-size FLAC spun forever past EOF (read() = 0xFF) with
+    // the audio mutex held: seeking froze the whole console.
     p1 = audiofile.read();
     p2 = audiofile.read();
     pos+=2;
-    while(!found || pos == m_file_size){
-        if(p1 == 0xFF && p2 == 0xF8){found = true; log_i("found"); break;}
+    while(pos < m_file_size){
+        if(p1 == 0xFF && (p2 & 0xFE) == 0xF8){found = true; break;}
         p1 = p2;
         p2 = audiofile.read();
         pos++;
@@ -5282,10 +5300,11 @@ uint32_t Audio::mp3_correctResumeFilePos(uint32_t resumeFilePos){
     uint32_t pos = resumeFilePos;
     audiofile.seek(pos);
 
+    // JIGGLYPUFF PATCH: stop at the end of the file (see flac_correctResumeFilePos).
     p1 = audiofile.read();
     p2 = audiofile.read();
     pos+=2;
-    while(!found || pos == m_file_size){
+    while(pos < m_file_size){
         if(p1 == 0xFF && (p2 & 0xF0) == 0xF0){found = true; break;}
         p1 = p2;
         p2 = audiofile.read();

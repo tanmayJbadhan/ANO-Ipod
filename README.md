@@ -31,13 +31,16 @@ hold **BOOT**, tap **RST**, release **BOOT**, and run it again.
 
 ## Using the console
 
-| Control | Home | Music | Game |
-|---|---|---|---|
-| Wheel | choose tile | volume | steer / pick district |
-| Left / Right | choose tile | previous / next song | steer / pick district |
-| Select (centre) | open | play / pause | boost / start race |
-| Up | — | back to Home | pause / back |
-| Down | — | volume down | brake / switch car |
+| Control | Home | Music lists | Now playing | Game |
+|---|---|---|---|---|
+| Wheel | choose tile | scroll | volume | steer / pick district |
+| Left / Right | choose tile | page up / down | tap: previous / next song · hold: rewind / fast-forward | steer / pick district |
+| Select (centre) | open | open / play | play / pause | boost / start race |
+| Up | — | back | back to the lists | pause / back |
+| Down | — | on a song: add to playlist | add to playlist | brake / switch car |
+
+Music opens on **Artists / Albums / Playlists**. Under Playlists, **+ New playlist**
+makes "Playlist 1", "Playlist 2" and so on.
 
 Anywhere:
 - **Hold Down + turn the wheel**: screen brightness (remembered).
@@ -46,8 +49,8 @@ Anywhere:
 - **Hold Select ~1.2 s**: switch off. **Hold ~2 s** to switch back on.
 - Touch works too: tap the tiles, the player buttons or "< Home".
 
-**Songs**: copy MP3 / WAV / M4A / AAC / FLAC files into the root of the microSD
-card, or use **Add songs** on the console and open `jigglypuff.local` on a phone
+**Songs**: copy MP3 / WAV / M4A / AAC / FLAC files anywhere on the microSD card
+(folders are fine), or use **Add songs** on the console and open `jigglypuff.local` on a phone
 on the same WiFi.
 
 ## How the repo is laid out
