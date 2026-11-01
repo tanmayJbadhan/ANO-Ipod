@@ -1,0 +1,15 @@
+# build output and editor state
+.pio
+.vscode
+
+# holds the home WiFi password - copy WifiConfig.example.h instead
+5_Web_Uploader/WifiConfig.h
+
+# parked files waiting to be thrown away
+deleted/
+
+# Claude Code permissions (personal, per machine)
+.claude/
+
+# sample songs that ship with the audio library, not needed to build
+libraries/ESP32-audioI2S/additional_info/Testfiles/

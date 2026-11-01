@@ -1,0 +1,643 @@
+<title>Console Wiring Map</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #eef3f1;
+    --surface: #ffffff;
+    --surface-sunken: #e3eae7;
+    --ink: #15241f;
+    --ink-dim: #55685f;
+    --ink-faint: #8a988f;
+    --border: #d2ded8;
+    --teal: #0f7a6c;
+    --teal-soft: #d9ece7;
+    --copper: #a85d1f;
+    --copper-soft: #f3e2cf;
+    --warn: #b23b3b;
+    --mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', Menlo, monospace;
+    --sans: 'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0b1c1a;
+      --surface: #11302c;
+      --surface-sunken: #0e2422;
+      --ink: #e9f2ee;
+      --ink-dim: #a3bab2;
+      --ink-faint: #5f7971;
+      --border: #1f453f;
+      --teal: #52d9c2;
+      --teal-soft: #163b36;
+      --copper: #e3a25c;
+      --copper-soft: #3a2a16;
+      --warn: #e38080;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #0b1c1a;
+    --surface: #11302c;
+    --surface-sunken: #0e2422;
+    --ink: #e9f2ee;
+    --ink-dim: #a3bab2;
+    --ink-faint: #5f7971;
+    --border: #1f453f;
+    --teal: #52d9c2;
+    --teal-soft: #163b36;
+    --copper: #e3a25c;
+    --copper-soft: #3a2a16;
+    --warn: #e38080;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    margin: 0;
+    padding: 48px 24px 80px;
+    display: flex;
+    justify-content: center;
+  }
+
+  main {
+    width: 100%;
+    max-width: 920px;
+  }
+
+  header {
+    margin-bottom: 40px;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 10px;
+  }
+
+  h1 {
+    font-size: 34px;
+    line-height: 1.15;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    text-wrap: balance;
+    font-weight: 700;
+  }
+
+  .subhead {
+    color: var(--ink-dim);
+    font-size: 16px;
+    line-height: 1.55;
+    max-width: 62ch;
+    margin: 0;
+  }
+
+  figure {
+    margin: 0 0 44px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 20px 16px;
+  }
+
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  figcaption {
+    font-size: 13px;
+    color: var(--ink-dim);
+    padding: 14px 6px 2px;
+    line-height: 1.6;
+    border-top: 1px solid var(--border);
+    margin-top: 14px;
+  }
+
+  figcaption b { color: var(--ink); font-weight: 600; }
+
+  .legend {
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-dim);
+    padding: 0 6px 14px;
+  }
+
+  .legend span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .swatch {
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    display: inline-block;
+  }
+
+  .swatch.dashed {
+    background: repeating-linear-gradient(90deg, currentColor 0 5px, transparent 5px 9px);
+  }
+
+  section.tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+    margin-bottom: 36px;
+  }
+
+  @media (max-width: 680px) {
+    section.tables { grid-template-columns: 1fr; }
+  }
+
+  .device-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .device-card header {
+    margin: 0;
+    padding: 16px 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .device-card.sd header { background: var(--teal-soft); }
+  .device-card.pcm header { background: var(--copper-soft); }
+
+  .device-card h2 {
+    font-size: 16px;
+    margin: 0;
+    font-weight: 600;
+  }
+
+  .device-card.sd h2 { color: var(--teal); }
+  .device-card.pcm h2 { color: var(--copper); }
+
+  .device-card .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+
+  th {
+    text-align: left;
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 10px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  td.pin { color: var(--ink); font-weight: 500; }
+
+  .cross-flag {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: var(--sans);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 14%, transparent);
+    padding: 2px 7px;
+    border-radius: 100px;
+    vertical-align: middle;
+  }
+
+  .notes {
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 22px 24px;
+  }
+
+  .notes h3 {
+    font-size: 14px;
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  .notes ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--ink-dim);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  .notes li { margin-bottom: 6px; }
+  .notes li:last-child { margin-bottom: 0; }
+
+  .notes code {
+    font-family: var(--mono);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 5px;
+    font-size: 12.5px;
+    color: var(--ink);
+  }
+
+  .dot {
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    margin-right: 7px;
+    border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+    vertical-align: baseline;
+  }
+
+  .order-note {
+    margin: 0;
+    padding: 11px 14px 13px;
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--ink-faint);
+    border-top: 1px solid var(--border);
+  }
+
+  .order-note b { color: var(--ink-dim); }
+
+  .posn {
+    font-family: var(--sans);
+    font-size: 10px;
+    color: var(--ink-faint);
+    margin-left: 5px;
+  }
+
+  td.skipped {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--warn);
+    background: color-mix(in srgb, var(--warn) 7%, transparent);
+  }
+
+  td.skipped b { font-weight: 600; }
+
+  .alert {
+    background: color-mix(in srgb, var(--warn) 10%, var(--surface));
+    border: 1px solid var(--warn);
+    border-left-width: 4px;
+    border-radius: 12px;
+    padding: 18px 22px;
+    margin-bottom: 36px;
+  }
+
+  .alert h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--warn);
+  }
+
+  .alert p {
+    margin: 0 0 10px;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--ink);
+  }
+
+  .alert p:last-child { margin-bottom: 0; }
+
+  .alert code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 5px;
+  }
+
+  .alert.ok {
+    background: color-mix(in srgb, var(--teal) 9%, var(--surface));
+    border-color: var(--teal);
+  }
+
+  .alert.ok h3 { color: var(--teal); }
+
+  .pin-row rect { rx: 7; }
+  .pin-row text { font-family: var(--mono); font-size: 12px; text-anchor: middle; dominant-baseline: middle; }
+  .pin-row rect.gpio { fill: var(--surface-sunken); stroke: var(--border); stroke-width: 1; }
+  .pin-row text.gpio { fill: var(--ink-dim); }
+  .pin-row rect.gnd { fill: var(--ink); stroke: none; }
+  .pin-row text.gnd { fill: var(--bg); }
+  .pin-row rect.power { fill: var(--warn); fill-opacity: 0.16; stroke: var(--warn); stroke-width: 1; }
+  .pin-row text.power { fill: var(--warn); }
+  .pin-row rect.hi-pcm { stroke: var(--copper); stroke-width: 2.5; }
+  .pin-row rect.hi-sd { stroke: var(--teal); stroke-width: 2.5; }
+  .pin-row rect.danger { fill: var(--warn); fill-opacity: 0.2; stroke: var(--warn); stroke-width: 2.5; stroke-dasharray: 4 3; }
+  .pin-row text.danger { fill: var(--warn); font-weight: 600; }
+  .callout { font-family: var(--mono); font-size: 11px; font-weight: 500; }
+  .callout.pcm { fill: var(--copper); }
+  .callout.sd { fill: var(--teal); }
+  .lead { stroke-width: 1.5; fill: none; }
+  .lead.pcm { stroke: var(--copper); }
+  .lead.sd { stroke: var(--teal); }
+</style>
+
+<main>
+  <header>
+    <p class="eyebrow">Jigglypuff &middot; assembly reference</p>
+    <h1>PCM5122 on the left, SD card on the right</h1>
+    <p class="subhead">Every wire stays on its own header — nothing crosses the board. The PCM5122 sits on the left because that's the only side with an I2C bus; the SD card sits on the right because that's the only side with a true 3.3V pin.</p>
+  </header>
+
+  <div class="alert ok">
+    <h3>Soldered and verified</h3>
+    <p>Both headers are wired as shown below, with jumper colours recorded. Each header has <b>13</b> pins — <code>BAT</code> on the right (between <code>3V3</code> and <code>GPIO38</code>) and the second <code>VBUS</code> on the left are both correctly left empty, so no wire sits on the raw battery terminal.</p>
+  </div>
+
+  <figure>
+    <svg viewBox="0 0 980 790" role="img" aria-label="Annotated LilyGo T-Display AMOLED pinout showing all 13 pins per header. On the left header the PCM5122 connects to SCL slash GPIO6, SDA slash GPIO7, GPIO21, GPIO47, GND, the upper VBUS and GPIO48. On the right header the SD card connects to GPIO41, GPIO40, GPIO39, GND, 3V3 and GPIO38, while the BAT pin between 3V3 and GPIO38 is marked do not connect. Positions are numbered from the bottom of each header.">
+      <!-- ================= board body ================= -->
+      <rect x="392" y="74" width="176" height="594" rx="16" fill="var(--surface-sunken)" stroke="currentColor" stroke-opacity="0.3" stroke-width="2" />
+      <rect x="420" y="130" width="120" height="146" rx="8" fill="currentColor" fill-opacity="0.12" />
+      <text x="480" y="208" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor" fill-opacity="0.5">ESP32-S3</text>
+      <rect x="432" y="600" width="96" height="42" rx="6" fill="currentColor" fill-opacity="0.12" />
+      <text x="480" y="625" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="currentColor" fill-opacity="0.5">USB-C</text>
+      <text x="480" y="64" text-anchor="middle" font-family="var(--mono)" font-size="11" fill="currentColor" fill-opacity="0.5">T-DISPLAY AMOLED 1.64</text>
+
+      <!-- header rails: 13 pads per side -->
+      <g fill="currentColor" fill-opacity="0.32">
+        <circle cx="406" cy="100" r="5" /><circle cx="406" cy="144" r="5" /><circle cx="406" cy="188" r="5" />
+        <circle cx="406" cy="232" r="5" /><circle cx="406" cy="276" r="5" /><circle cx="406" cy="320" r="5" />
+        <circle cx="406" cy="364" r="5" /><circle cx="406" cy="408" r="5" /><circle cx="406" cy="452" r="5" />
+        <circle cx="406" cy="496" r="5" /><circle cx="406" cy="540" r="5" /><circle cx="406" cy="584" r="5" />
+        <circle cx="406" cy="628" r="5" />
+        <circle cx="554" cy="100" r="5" /><circle cx="554" cy="144" r="5" /><circle cx="554" cy="188" r="5" />
+        <circle cx="554" cy="232" r="5" /><circle cx="554" cy="276" r="5" /><circle cx="554" cy="320" r="5" />
+        <circle cx="554" cy="364" r="5" /><circle cx="554" cy="408" r="5" /><circle cx="554" cy="452" r="5" />
+        <circle cx="554" cy="496" r="5" /><circle cx="554" cy="540" r="5" /><circle cx="554" cy="584" r="5" />
+        <circle cx="554" cy="628" r="5" />
+      </g>
+
+      <!-- position numbers, counted from the bottom -->
+      <g font-family="var(--mono)" font-size="9" fill="currentColor" fill-opacity="0.45" text-anchor="middle">
+        <text x="428" y="104">13</text><text x="428" y="148">12</text><text x="428" y="192">11</text>
+        <text x="428" y="236">10</text><text x="428" y="280">9</text><text x="428" y="324">8</text>
+        <text x="428" y="368">7</text><text x="428" y="412">6</text><text x="428" y="456">5</text>
+        <text x="428" y="500">4</text><text x="428" y="544">3</text><text x="428" y="588">2</text>
+        <text x="428" y="632">1</text>
+        <text x="532" y="104">13</text><text x="532" y="148">12</text><text x="532" y="192">11</text>
+        <text x="532" y="236">10</text><text x="532" y="280">9</text><text x="532" y="324">8</text>
+        <text x="532" y="368">7</text><text x="532" y="412">6</text><text x="532" y="456">5</text>
+        <text x="532" y="500">4</text><text x="532" y="544">3</text><text x="532" y="588">2</text>
+        <text x="532" y="632">1</text>
+      </g>
+
+      <!-- ================= LEFT COLUMN — 13 pins, top to bottom ================= -->
+      <g class="pin-row">
+        <rect class="gpio" x="286" y="87" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="338" y="101" opacity="0.4">GPIO1</text>
+
+        <rect class="gpio hi-pcm" x="286" y="131" width="104" height="26" />
+        <text class="gpio" x="338" y="145" style="fill:var(--ink)">SCL · 6</text>
+
+        <rect class="gpio hi-pcm" x="286" y="175" width="104" height="26" />
+        <text class="gpio" x="338" y="189" style="fill:var(--ink)">SDA · 7</text>
+
+        <rect class="gpio" x="286" y="219" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="338" y="233" opacity="0.4">GPIO2</text>
+
+        <rect class="gpio" x="286" y="263" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="338" y="277" opacity="0.4">GPIO3</text>
+
+        <rect class="gpio" x="286" y="307" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="338" y="321" opacity="0.4">GPIO5</text>
+
+        <rect class="gpio" x="286" y="351" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="338" y="365" opacity="0.4">GPIO18</text>
+
+        <rect class="gpio hi-pcm" x="286" y="395" width="104" height="26" />
+        <text class="gpio" x="338" y="409" style="fill:var(--ink)">GPIO21</text>
+
+        <rect class="gpio hi-pcm" x="286" y="439" width="104" height="26" />
+        <text class="gpio" x="338" y="453" style="fill:var(--ink)">GPIO47</text>
+
+        <rect class="gnd hi-pcm" x="286" y="483" width="104" height="26" />
+        <text class="gnd" x="338" y="497">GND</text>
+
+        <rect class="power hi-pcm" x="286" y="527" width="104" height="26" />
+        <text class="power" x="338" y="541">VBUS</text>
+
+        <rect class="power" x="286" y="571" width="104" height="26" opacity="0.4" />
+        <text class="power" x="338" y="585" opacity="0.9">VBUS</text>
+
+        <rect class="gpio hi-pcm" x="286" y="615" width="104" height="26" />
+        <text class="gpio" x="338" y="629" style="fill:var(--ink)">GPIO48</text>
+      </g>
+
+      <!-- ================= RIGHT COLUMN — 13 pins, top to bottom ================= -->
+      <g class="pin-row">
+        <rect class="gnd" x="570" y="87" width="104" height="26" opacity="0.4" />
+        <text class="gnd" x="622" y="101" opacity="0.9">GND</text>
+
+        <rect class="gpio" x="570" y="131" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="622" y="145" opacity="0.4">GPIO46</text>
+
+        <rect class="gpio" x="570" y="175" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="622" y="189" opacity="0.4">GPIO45</text>
+
+        <rect class="gpio" x="570" y="219" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="622" y="233" opacity="0.4">GPIO44</text>
+
+        <rect class="gpio" x="570" y="263" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="622" y="277" opacity="0.4">GPIO43</text>
+
+        <rect class="gpio" x="570" y="307" width="104" height="26" opacity="0.4" />
+        <text class="gpio" x="622" y="321" opacity="0.4">GPIO42</text>
+
+        <rect class="gpio hi-sd" x="570" y="351" width="104" height="26" />
+        <text class="gpio" x="622" y="365" style="fill:var(--ink)">GPIO41</text>
+
+        <rect class="gpio hi-sd" x="570" y="395" width="104" height="26" />
+        <text class="gpio" x="622" y="409" style="fill:var(--ink)">GPIO40</text>
+
+        <rect class="gpio hi-sd" x="570" y="439" width="104" height="26" />
+        <text class="gpio" x="622" y="453" style="fill:var(--ink)">GPIO39</text>
+
+        <rect class="gnd hi-sd" x="570" y="483" width="104" height="26" />
+        <text class="gnd" x="622" y="497">GND</text>
+
+        <rect class="power hi-sd" x="570" y="527" width="104" height="26" />
+        <text class="power" x="622" y="541">3V3</text>
+
+        <rect class="danger" x="570" y="571" width="104" height="26" />
+        <text class="danger" x="622" y="585">BAT</text>
+
+        <rect class="gpio hi-sd" x="570" y="615" width="104" height="26" />
+        <text class="gpio" x="622" y="629" style="fill:var(--ink)">GPIO38</text>
+      </g>
+
+      <!-- ================= LEFT callouts (PCM5122) ================= -->
+      <g class="lead pcm">
+        <line x1="282" y1="144" x2="196" y2="144" />
+        <line x1="282" y1="188" x2="196" y2="188" />
+        <line x1="282" y1="408" x2="196" y2="408" />
+        <line x1="282" y1="452" x2="196" y2="452" />
+        <line x1="282" y1="496" x2="196" y2="496" />
+        <line x1="282" y1="540" x2="196" y2="540" />
+        <line x1="282" y1="628" x2="196" y2="628" />
+      </g>
+      <!-- physical jumper colour swatches, bottom-to-top: blue lightred black orange yellow / red green up top -->
+      <g stroke="currentColor" stroke-opacity="0.3" stroke-width="1">
+        <circle cx="208" cy="144" r="7" fill="#2e9b57" />
+        <circle cx="208" cy="188" r="7" fill="#d93b3b" />
+        <circle cx="208" cy="412" r="7" fill="#e8c33a" />
+        <circle cx="208" cy="456" r="7" fill="#e07b2c" />
+        <circle cx="208" cy="500" r="7" fill="#1a1a1a" />
+        <circle cx="208" cy="544" r="7" fill="#f09a9a" />
+        <circle cx="208" cy="632" r="7" fill="#2f6fd0" />
+      </g>
+      <g class="callout pcm" text-anchor="end">
+        <text x="192" y="148">SCL · green</text>
+        <text x="192" y="192">SDA · red</text>
+        <text x="192" y="412">DAC · yellow</text>
+        <text x="192" y="456">CLK · orange</text>
+        <text x="192" y="500">GND · black</text>
+        <text x="192" y="544">5V · lightred</text>
+        <text x="192" y="632">LRCLK · blue</text>
+      </g>
+      <rect x="22" y="74" width="34" height="594" rx="11" fill="var(--copper-soft)" stroke="var(--copper)" stroke-width="1.5" />
+      <text x="39" y="371" text-anchor="middle" font-family="var(--sans)" font-weight="700" font-size="13" fill="var(--copper)" transform="rotate(-90 39 371)">PCM5122 · 7 wires</text>
+
+      <!-- ================= RIGHT callouts (SD card) ================= -->
+      <g class="lead sd">
+        <line x1="678" y1="364" x2="748" y2="364" />
+        <line x1="678" y1="408" x2="748" y2="408" />
+        <line x1="678" y1="452" x2="748" y2="452" />
+        <line x1="678" y1="496" x2="748" y2="496" />
+        <line x1="678" y1="540" x2="748" y2="540" />
+        <line x1="678" y1="628" x2="748" y2="628" />
+      </g>
+      <!-- BAT skip marker -->
+      <line x1="678" y1="584" x2="740" y2="584" stroke="var(--warn)" stroke-width="1.5" stroke-dasharray="3 3" />
+      <text x="748" y="588" font-family="var(--mono)" font-size="11" font-weight="600" fill="var(--warn)">skip — no wire here</text>
+
+      <!-- physical jumper colour swatches, bottom-to-top: green black blue white grey purple -->
+      <g stroke="currentColor" stroke-opacity="0.3" stroke-width="1">
+        <circle cx="762" cy="364" r="7" fill="#8e5cd9" />
+        <circle cx="762" cy="408" r="7" fill="#9aa4ad" />
+        <circle cx="762" cy="452" r="7" fill="#f2f2f2" />
+        <circle cx="762" cy="496" r="7" fill="#2f6fd0" />
+        <circle cx="762" cy="540" r="7" fill="#1a1a1a" />
+        <circle cx="762" cy="628" r="7" fill="#2e9b57" />
+      </g>
+      <g class="callout sd" text-anchor="start">
+        <text x="778" y="368">purple · D3 · CS</text>
+        <text x="778" y="412">grey · D0 · MISO</text>
+        <text x="778" y="456">white · CMD · MOSI</text>
+        <text x="778" y="500">blue · GND</text>
+        <text x="778" y="544">black · 3V</text>
+        <text x="778" y="632">green · CLK</text>
+      </g>
+      <rect x="930" y="74" width="34" height="594" rx="11" fill="var(--teal-soft)" stroke="var(--teal)" stroke-width="1.5" />
+      <text x="947" y="371" text-anchor="middle" font-family="var(--sans)" font-weight="700" font-size="13" fill="var(--teal)" transform="rotate(-90 947 371)">SD CARD · 6 wires</text>
+
+      <!-- side labels -->
+      <text x="338" y="70" text-anchor="middle" font-family="var(--sans)" font-weight="600" font-size="11" fill="var(--copper)" letter-spacing="0.08em">LEFT HEADER · 13 PINS</text>
+      <text x="622" y="70" text-anchor="middle" font-family="var(--sans)" font-weight="600" font-size="11" fill="var(--teal)" letter-spacing="0.08em">RIGHT HEADER · 13 PINS</text>
+
+      <!-- bottom orientation marker -->
+      <text x="480" y="690" text-anchor="middle" font-family="var(--mono)" font-size="10" fill="currentColor" fill-opacity="0.5">↓ position 1 = bottom of the board (USB-C end) ↓</text>
+    </svg>
+    <div class="legend">
+      <span><span class="swatch" style="background:var(--copper)"></span>PCM5122 — left header</span>
+      <span><span class="swatch" style="background:var(--teal)"></span>SD card — right header</span>
+      <span style="opacity:0.55">faded = pin not used</span>
+      <span style="color:var(--warn)">dashed = must stay empty</span>
+    </div>
+    <figcaption><b>Read it like the official pinout card:</b> all 13 pins per side are shown, numbered from the bottom of the board so you can count them off physically. Outlined chips are pins you solder to; faded chips are untouched; the red dashed <code>BAT</code> pin must stay empty. Nothing crosses the board: GPIO6/7 is the only I2C bus (so the DAC lives left), and <code>3V3</code> only appears on the right row (so the 3V-only SD card lives right).</figcaption>
+  </figure>
+
+  <section class="tables">
+    <div class="device-card pcm">
+      <header>
+        <h2>PCM5122</h2>
+        <span class="tag">7 wires &middot; left header</span>
+      </header>
+      <table>
+        <thead><tr><th>Wire</th><th>HAT pin</th><th>Board pin</th></tr></thead>
+        <tbody>
+          <tr><td class="pin"><span class="dot" style="background:#2f6fd0"></span>blue</td><td>LRCLK</td><td>GPIO48 <span class="posn">pos 1</span></td></tr>
+          <tr><td class="skipped" colspan="3">no wire — lower <b>VBUS</b> <span class="posn">pos 2</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#f09a9a"></span>lightred</td><td>5V</td><td>VBUS <span class="posn">pos 3</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#1a1a1a"></span>black</td><td>GND</td><td>GND <span class="posn">pos 4</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#e07b2c"></span>orange</td><td>CLK · BCK</td><td>GPIO47 <span class="posn">pos 5</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#e8c33a"></span>yellow</td><td>DAC · DIN</td><td>GPIO21 <span class="posn">pos 6</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#d93b3b"></span>red</td><td>SDA</td><td>GPIO7 <span class="posn">pos 11</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#2e9b57"></span>green</td><td>SCL</td><td>GPIO6 <span class="posn">pos 12</span></td></tr>
+        </tbody>
+      </table>
+      <p class="order-note">The two VBUS pads are electrically identical — either works, just use only one. SDA/SCL sit near the <b>top</b> of this header, not adjacent to the rest.</p>
+    </div>
+
+    <div class="device-card sd">
+      <header>
+        <h2>SD card</h2>
+        <span class="tag">6 wires &middot; right header</span>
+      </header>
+      <table>
+        <thead><tr><th>Wire</th><th>Card pin</th><th>Board pin</th></tr></thead>
+        <tbody>
+          <tr><td class="pin"><span class="dot" style="background:#2e9b57"></span>green</td><td>CLK</td><td>GPIO38 <span class="posn">pos 1</span></td></tr>
+          <tr><td class="skipped" colspan="3"><span class="dot" style="background:var(--warn)"></span>no wire — <b>BAT</b> <span class="posn">pos 2</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#1a1a1a"></span>black</td><td>3V</td><td>3V3 <span class="posn">pos 3</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#2f6fd0"></span>blue</td><td>GND</td><td>GND <span class="posn">pos 4</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#f2f2f2"></span>white</td><td>CMD · MOSI</td><td>GPIO39 <span class="posn">pos 5</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#9aa4ad"></span>grey</td><td>D0 · MISO</td><td>GPIO40 <span class="posn">pos 6</span></td></tr>
+          <tr><td class="pin"><span class="dot" style="background:#8e5cd9"></span>purple</td><td>D3 · CS</td><td>GPIO41 <span class="posn">pos 7</span></td></tr>
+        </tbody>
+      </table>
+      <p class="order-note">Positions counted from the <b>bottom</b> of the header. Six wires span seven positions — position 2 (BAT) is deliberately skipped.</p>
+    </div>
+  </section>
+
+  <div class="notes">
+    <h3>Before you solder</h3>
+    <ul>
+      <li>SDA/SCL (<code>GPIO7</code> / <code>GPIO6</code>) is the board's only I2C bus — the PCM5122's control line shares it with the joystick on the left STEMMA QT port. Different I2C addresses, so no conflict.</li>
+      <li>The SD card is 3V-only with no onboard regulator — don't substitute <code>VBUS</code> (5V) for its power pin, it needs the real <code>3V3</code> pin.</li>
+      <li>Leave the SD card's <code>DET</code> pin (card detect) unconnected — not used by the firmware.</li>
+      <li>The left header's two <code>VBUS</code> pads are the same net — wire only one.</li>
+      <li>Firmware pin map lives in <code>3_Music_App/SdConfig.h</code> and <code>3_Music_App/AudioConfig.h</code>; it must match whatever is physically soldered.</li>
+    </ul>
+  </div>
+</main>
