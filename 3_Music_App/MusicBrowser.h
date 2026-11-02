@@ -34,6 +34,12 @@ void reset(); // back to the top menu (also after a rescan)
 
 void draw();
 bool atTop(); // showing the tiles (no list panel behind them)
+
+// How deep in the lists the browser is, and a way back down there. UP only
+// steps back without forgetting the lists it left, so this undoes the "back"
+// of the UP taps that turn the screen off.
+uint8_t level();
+void returnTo(uint8_t level);
 Action key(Key k);
 Action wheel(int32_t clicks);
 Action tap(int16_t x, int16_t y);

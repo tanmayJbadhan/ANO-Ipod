@@ -308,6 +308,12 @@ uint16_t playIndex() { return chosen; }
 
 bool atTop() { return cur().kind == Kind::Root; }
 
+uint8_t level() { return depth; }
+
+void returnTo(uint8_t lvl) {
+  if (lvl > depth && lvl < 4) depth = lvl;
+}
+
 void draw() {
   Level &l = cur();
   if (l.kind == Kind::Root) {

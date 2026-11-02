@@ -57,6 +57,7 @@
 #include "LullabyRun.h"
 #include "CypressNight.h"
 #include "LateForTea.h"
+#include "EmeraldCity.h"
 #include "WifiConfig.h"
 
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -83,7 +84,7 @@ int gamesSel = 0;          // focused tile in Games
 bool gameFailed = false;   // the last game didn't have the memory to start
 
 // The game running inside the Games screen, if any.
-enum class Game : uint8_t { None, Run, Cypress, Tea };
+enum class Game : uint8_t { None, Run, Cypress, Tea, Oz };
 Game game = Game::None;
 bool musicActive = false;  // the user wants music playing (drives auto-advance)
 bool needsRedraw = true;
@@ -399,8 +400,9 @@ void drawNowPlaying() {
 }
 
 // Games menu: one tile per game.
-static const int16_t GTILE_Y = 54, GTILE_W = 136, GTILE_H = 188, GTILE_GAP = 10;
-int16_t gameTileX(int i) { return (int16_t)((SCREEN_W - (3 * GTILE_W + 2 * GTILE_GAP)) / 2 + i * (GTILE_W + GTILE_GAP)); }
+static const int GAMES = 4;
+static const int16_t GTILE_Y = 54, GTILE_W = 102, GTILE_H = 188, GTILE_GAP = 8;
+int16_t gameTileX(int i) { return (int16_t)((SCREEN_W - (GAMES * GTILE_W + (GAMES - 1) * GTILE_GAP)) / 2 + i * (GTILE_W + GTILE_GAP)); }
 
 void iconTea(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
   gfx->fillRoundRect(cx - 14, cy - 34, 9, 28, 4, c);    // bunny ears
@@ -423,6 +425,21 @@ void iconCar(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
   gfx->fillCircle(cx + 20, cy + 16, 3, cut);
 }
 
+void iconCrane(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  gfx->fillRect(cx - 30, cy - 32, 5, 64, c);              // mast
+  gfx->fillRect(cx - 34, cy - 32, 66, 5, c);              // jib
+  gfx->fillTriangle(cx - 32, cy - 32, cx - 23, cy - 32, cx - 28, cy - 42, c);
+  gfx->drawLine(cx + 14, cy - 27, cx + 14, cy - 10, c);   // the rope
+  gfx->fillRoundRect(cx + 2, cy - 10, 24, 11, 2, c);      // a floor on the hook
+  gfx->fillRect(cx + 7, cy - 7, 4, 4, cut);
+  gfx->fillRect(cx + 17, cy - 7, 4, 4, cut);
+  gfx->fillRoundRect(cx - 12, cy + 6, 26, 12, 2, c);      // the tower
+  gfx->fillRoundRect(cx - 14, cy + 20, 30, 12, 2, c);
+  gfx->fillRect(cx - 7, cy + 9, 4, 5, cut);
+  gfx->fillRect(cx + 5, cy + 9, 4, 5, cut);
+  gfx->fillRect(cx - 2, cy + 23, 5, 9, cut);
+}
+
 void iconCypress(int16_t cx, int16_t cy, uint16_t c) {
   gfx->fillCircle(cx + 24, cy - 22, 7, c);              // the moon
   gfx->fillTriangle(cx - 6, cy + 18, cx + 6, cy + 18, cx, cy - 30, c); // cypress
@@ -434,10 +451,10 @@ void iconCypress(int16_t cx, int16_t cy, uint16_t c) {
 void drawGames() {
   Glass::background();
   drawStatusBar("< Home");
-  static const char *names[3] = {"Lullaby Run", "Cypress Night", "Late for Tea"};
-  static const char *subs[3] = {"City night racer", "Owls in the garden", "Wonderland dash"};
-  const uint16_t tints[3] = {C_BLUE, C_GREEN, C_PINK};
-  for (int i = 0; i < 3; i++) {
+  static const char *names[GAMES] = {"Lullaby Run", "Cypress Night", "Late for Tea", "Emerald City"};
+  static const char *subs[GAMES] = {"Night racer", "Owl maze", "Wonderland", "Build Oz"};
+  const uint16_t tints[GAMES] = {C_BLUE, C_GREEN, C_PINK, Glass::rgb(40, 190, 120)};
+  for (int i = 0; i < GAMES; i++) {
     bool sel = i == gamesSel;
     int16_t x = gameTileX(i), y = GTILE_Y, w = GTILE_W, h = GTILE_H;
     if (sel) { x -= 5; y -= 5; w += 10; h += 10; }
@@ -446,7 +463,8 @@ void drawGames() {
     uint16_t cut = Glass::blend(tints[i], 0x0000, 90);
     if (i == 0) iconCar(cx, y + 70, C_TEXT, cut);
     else if (i == 1) iconCypress(cx, y + 70, C_TEXT);
-    else iconTea(cx, y + 70, C_TEXT, cut);
+    else if (i == 2) iconTea(cx, y + 70, C_TEXT, cut);
+    else iconCrane(cx, y + 70, C_TEXT, cut);
     // Big type when the name fits the tile, else the small size.
     uint8_t size = gfx->textWidth(names[i], 2) <= w - 10 ? 2 : 1;
     textCenter(cx, y + h - (size == 2 ? 62 : 56), names[i], size, sel ? C_TEXT : C_DIM);
@@ -530,7 +548,7 @@ void render() {
 
 bool musicWantsPower() {
   return (musicActive && !MusicPlayer::isPaused()) || LullabyRun::wantsAudioPower() ||
-         CypressNight::wantsAudioPower() || LateForTea::wantsAudioPower();
+         CypressNight::wantsAudioPower() || LateForTea::wantsAudioPower() || EmeraldCity::wantsAudioPower();
 }
 
 // --- whichever game is running ------------------------------------------------
@@ -538,13 +556,14 @@ bool musicWantsPower() {
 bool gameActive() {
   if (screen != Screen::Games) return false;
   return (game == Game::Run && LullabyRun::active()) || (game == Game::Cypress && CypressNight::active()) ||
-         (game == Game::Tea && LateForTea::active());
+         (game == Game::Tea && LateForTea::active()) || (game == Game::Oz && EmeraldCity::active());
 }
 
 void gameExit() {
   if (game == Game::Run) LullabyRun::exit();
   else if (game == Game::Cypress) CypressNight::exit();
   else if (game == Game::Tea) LateForTea::exit();
+  else if (game == Game::Oz) EmeraldCity::exit();
   game = Game::None;
 }
 
@@ -552,23 +571,26 @@ void gameKey(const InputEvent &ev) {
   if (game == Game::Run) LullabyRun::key(ev);
   else if (game == Game::Cypress) CypressNight::key(ev);
   else if (game == Game::Tea) LateForTea::key(ev);
+  else if (game == Game::Oz) EmeraldCity::key(ev);
 }
 
 void gameFrame(int32_t wheel) {
   if (game == Game::Run) LullabyRun::frame(input, touch, wheel);
   else if (game == Game::Cypress) CypressNight::frame(input, touch, wheel);
   else if (game == Game::Tea) LateForTea::frame(input, touch, wheel);
+  else if (game == Game::Oz) EmeraldCity::frame(input, touch, wheel);
 }
 
 void gamePause() {
   if (game == Game::Run) LullabyRun::pause();
   else if (game == Game::Cypress) CypressNight::pause();
   else if (game == Game::Tea) LateForTea::pause();
+  else if (game == Game::Oz) EmeraldCity::pause();
 }
 
 bool gameWantsExit() {
   return (game == Game::Run && LullabyRun::wantsExit()) || (game == Game::Cypress && CypressNight::wantsExit()) ||
-         (game == Game::Tea && LateForTea::wantsExit());
+         (game == Game::Tea && LateForTea::wantsExit()) || (game == Game::Oz && EmeraldCity::wantsExit());
 }
 
 // Triple-tapping UP turns the screen off - except mid-maze, where UP walks.
@@ -658,10 +680,11 @@ void launchGame(int i) {
   MusicPlayer::stop();
   musicActive = false;
   bool ok = i == 0 ? LullabyRun::enter(gfx, canvas, panel)
-          : i == 1 ? CypressNight::enter(gfx, panel) : LateForTea::enter(gfx, panel);
+          : i == 1 ? CypressNight::enter(gfx, panel)
+          : i == 2 ? LateForTea::enter(gfx, panel) : EmeraldCity::enter(gfx, panel);
   gameFailed = !ok;
   if (ok) {
-    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : Game::Tea;
+    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : i == 2 ? Game::Tea : Game::Oz;
     Pcm5122::setMute(false); // a paused track leaves the DAC muted
     powerAudioNow();
   }
@@ -919,10 +942,11 @@ void setup() {
 
 // ---------------------------------------------------------------------------
 // Screen sleep: triple-clicking UP turns just the display off (music
-// keeps playing). Only a double-click on any arrow, or turning the
-// wheel about 45°, turns it back on - single presses, the centre button
-// and touch are ignored while it's off, so it can't wake by accident in a
-// pocket. The waking input does nothing else.
+// keeps playing). Only a double-click on any arrow turns it back on (or,
+// with no music playing, turning the wheel about 45°) - single presses, the
+// centre button and touch are ignored while it's off, so it can't wake by
+// accident in a pocket. The waking input does nothing else. While music
+// plays, the wheel sets the volume without waking the screen.
 //
 // The arrows sit on the wheel's ring, so pressing them often nudges the
 // wheel a click; for a moment after sleeping nothing wakes it.
@@ -934,6 +958,7 @@ static int32_t sleepWheelAcc = 0;
 static const uint32_t DOUBLE_TAP_MS = 400;
 static const uint32_t WAKE_GRACE_MS = 800;
 static const int32_t WAKE_WHEEL_CLICKS = 3; // 24 clicks per turn -> 45°
+static const int32_t LOCKED_VOLUME_CLICKS = 2;
 
 static Key lastTapKey = Key::Select;
 static uint32_t lastTapAt = 0;
@@ -1081,9 +1106,24 @@ void handleKey(const InputEvent &ev) {
   if (!ev.pressed) return;
 
   if (ev.key == Key::Up) {
-    // Triple-click UP is the only way to turn the screen off.
-    if (countTap(Key::Up) >= 3) {
+    // Triple-click UP is the only way to turn the screen off. Its first two
+    // clicks have already stepped back, so it then returns to where the
+    // first one was pressed: waking lands on the same song or list.
+    static Screen tapScreen = Screen::Home;
+    static uint8_t tapLevel = 0;
+    uint8_t taps = countTap(Key::Up);
+    if (taps == 1) {
+      tapScreen = screen;
+      tapLevel = MusicBrowser::level();
+    }
+    if (taps >= 3) {
       resetTaps();
+      // (Add songs is left closed: going back stopped its WiFi.)
+      if (tapScreen != Screen::AddSongs) {
+        screen = tapScreen;
+        MusicBrowser::returnTo(tapLevel);
+        needsRedraw = true;
+      }
       sleepDisplay();
       return;
     }
@@ -1111,7 +1151,7 @@ void handleKey(const InputEvent &ev) {
       break;
     case Screen::Games:
       if (ev.key == Key::Left && gamesSel > 0) { gamesSel--; needsRedraw = true; }
-      if (ev.key == Key::Right && gamesSel < 2) { gamesSel++; needsRedraw = true; }
+      if (ev.key == Key::Right && gamesSel < GAMES - 1) { gamesSel++; needsRedraw = true; }
       break;
     case Screen::AddSongs:
       if (ev.key == Key::Left) goHome();
@@ -1147,7 +1187,7 @@ void handleTouch() {
   } else if (screen == Screen::Music) {
     browserAction(MusicBrowser::tap(x, y));
   } else if (screen == Screen::Games) {
-    for (int i = 0; i < 3; i++) {
+    for (int i = 0; i < GAMES; i++) {
       if (x >= gameTileX(i) && x < gameTileX(i) + GTILE_W && y >= GTILE_Y && y < GTILE_Y + GTILE_H) {
         gamesSel = i;
         launchGame(i);
@@ -1177,7 +1217,7 @@ void handleWheel(int32_t delta) {
     browserAction(MusicBrowser::pickerWheel(delta));
   } else if (screen == Screen::Home || screen == Screen::Games) {
     int &sel = screen == Screen::Home ? homeSel : gamesSel;
-    int maxSel = 2; // three tiles on both screens
+    int maxSel = screen == Screen::Home ? 2 : GAMES - 1;
     wheelAcc += delta;
     while (wheelAcc >= 2) { wheelAcc -= 2; if (sel < maxSel) sel++; needsRedraw = true; }
     while (wheelAcc <= -2) { wheelAcc += 2; if (sel > 0) sel--; needsRedraw = true; }
@@ -1190,7 +1230,8 @@ void handleWheel(int32_t delta) {
 
 // Bench commands over USB serial, for testing without hands on the
 // buttons: g = open the game, m = open Music, h = Home, s/u/d/l/r = tap a
-// button, L/R = hold LEFT/RIGHT for ~1.5 s, +/- = turn the wheel a click.
+// button, L/R = hold LEFT/RIGHT for ~1.5 s, +/- = turn the wheel a click,
+// w = wake the screen.
 void serialCommands() {
   if (!Serial.available()) return;
   char c = Serial.read();
@@ -1201,6 +1242,7 @@ void serialCommands() {
     launchGame(c == 'g' ? 0 : 1);
   } else if (c == 'm' && screen == Screen::Home) openApp(0);
   else if (c == 'h') goHome();
+  else if (c == 'w') wakeDisplay();
   else if (gameActive() && k != Key::None) { // (screenshots etc. still work in a game)
     gameKey({k, true, false});
     gameKey({k, false, false});
@@ -1223,11 +1265,16 @@ void serialCommands() {
     if (game == Game::Cypress && gameActive()) { fb = CypressNight::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Tea && gameActive()) { fb = LateForTea::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Run && gameActive()) { fb = LullabyRun::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Oz && gameActive()) { fb = EmeraldCity::frameBuffer(); w = 228; h = 140; }
     Serial.printf("\nSHOT %d %d %d\n", w, h, (int)gfx->flipped());
     Serial.write((const uint8_t *)fb, (size_t)w * h * 2);
     Serial.println();
   } else if (c == 'A' && game == Game::Tea) {
     LateForTea::benchUnlockAll();
+  } else if (c == 'A' && game == Game::Oz) {
+    EmeraldCity::benchUnlockAll();
+  } else if (c == 'Z' && game == Game::Oz) {
+    EmeraldCity::benchAutoplay();
   } else if (c == 'Z' && game == Game::Tea) {
     LateForTea::benchLineup();
   } else if (c == 'I') {
@@ -1280,6 +1327,7 @@ void loop() {
           isDoubleTap(ev.key)) {
         wakeDisplay();
       }
+      if (ev.pressed) sleepWheelAcc = 0; // an arrow's nudge isn't a volume turn
       continue;
     }
     handleKey(ev); // it decides which buttons act on auto-repeat
@@ -1299,9 +1347,16 @@ void loop() {
 
   int32_t delta = input.encoderDelta();
   if (displayAsleep) {
-    // A real turn (~45°) wakes the screen; a nudge from an arrow press doesn't.
     if (wakeAllowed()) sleepWheelAcc += delta;
-    if (abs(sleepWheelAcc) >= WAKE_WHEEL_CLICKS) wakeDisplay();
+    if (musicActive && !gameActive()) {
+      // With music playing, the wheel sets the volume and the screen stays
+      // off. Two clicks a step, so a lone nudge from an arrow press is ignored.
+      while (sleepWheelAcc >= LOCKED_VOLUME_CLICKS) { sleepWheelAcc -= LOCKED_VOLUME_CLICKS; changeVolume(1); }
+      while (sleepWheelAcc <= -LOCKED_VOLUME_CLICKS) { sleepWheelAcc += LOCKED_VOLUME_CLICKS; changeVolume(-1); }
+    } else if (abs(sleepWheelAcc) >= WAKE_WHEEL_CLICKS) {
+      // Otherwise a real turn (~45°) wakes the screen; a nudge doesn't.
+      wakeDisplay();
+    }
     delta = 0;
   }
   if (gameActive()) {

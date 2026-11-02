@@ -92,6 +92,16 @@ static const uint32_t MUTE_RAMP_MS = 15;   // let the ramp-down finish
 static const uint32_t UNMUTE_DELAY_MS = 120;
 static uint32_t s_unmuteAt = 0;
 
+// A new song must stay muted longer. The decoder only sets the I2S clock
+// once it reaches the first audio frame (~0.7 s into an M4A), and this HAT
+// has no MCLK: the PCM5122 rebuilds its clock from BCK, so that restart is
+// heard as a burst of static if the DAC is already unmuted. Wait for the
+// first decoded frame, then give the DAC's PLL time to lock again.
+static const uint32_t DECODE_SETTLE_MS = 150;
+static const uint32_t DECODE_GIVE_UP_MS = 4000; // never leave it silent
+static uint32_t s_openedAt = 0;
+static bool s_waitForDecode = false;
+
 static void muteForChange() {
   Pcm5122::setMute(true);
   delay(MUTE_RAMP_MS);
@@ -156,6 +166,8 @@ bool MusicPlayer::playSd(const char *path) {
   }
 
   muteForChange();
+  s_openedAt = millis();
+  s_waitForDecode = true;
   bool ok;
   if (audioMutex) xSemaphoreTake(audioMutex, portMAX_DELAY);
   ok = audio->connecttoFS(SD, path);
@@ -257,8 +269,26 @@ bool MusicPlayer::isRunning() {
   return _i2sReady && audio && audio->isRunning();
 }
 
+// Has the new song reached its first decoded frame, and been playing for a
+// moment since? The library stamps that frame's time, and reports
+// millis() minus it - so a stamp from before the song was opened belongs to
+// the previous one.
+static bool decodeSettled() {
+  if (!audio) return true;
+  uint32_t now = millis();
+  uint32_t playing = audio->getTotalPlayingTime();
+  bool started = (int32_t)(now - playing - s_openedAt) >= 0;
+  if (started && playing >= DECODE_SETTLE_MS) return true;
+  return now - s_openedAt >= DECODE_GIVE_UP_MS;
+}
+
 void MusicPlayer::loop() {
   if (s_unmuteAt && (int32_t)(millis() - s_unmuteAt) >= 0) {
+    if (s_waitForDecode) {
+      if (!decodeSettled()) return;
+      Serial.printf("unmuted %lu ms after opening\n", (unsigned long)(millis() - s_openedAt));
+    }
+    s_waitForDecode = false;
     s_unmuteAt = 0;
     if (!_paused) Pcm5122::setMute(false);
   }

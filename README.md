@@ -1,7 +1,7 @@
 # Jigglypuff
 
 A handmade pocket music console, built as a gift. It plays your music library
-from a microSD card through a hi-fi DAC, has three games, and lets you add and
+from a microSD card through a hi-fi DAC, has four games, and lets you add and
 organise songs from a phone. It's all wrapped in a "liquid glass" theme in
 Jigglypuff pink, with Jigglypuff on the Home screen.
 
@@ -13,14 +13,24 @@ Built on a LilyGo **T-Display-S3-AMOLED-1.64** with an Adafruit ANO click wheel.
 </p>
 
 <p align="center">
+  <img src="07_Images/screen-home-playing.png" width="32%" alt="Home screen with a song playing">
   <img src="07_Images/screen-music-menu.png" width="32%" alt="Music menu">
-  <img src="07_Images/screen-games-menu.png" width="32%" alt="Games menu">
-  <img src="07_Images/screen-late-for-tea-title.png" width="32%" alt="Late for Tea title">
+  <img src="07_Images/screen-now-playing.png" width="32%" alt="Now playing">
 </p>
 <p align="center">
+  <img src="07_Images/screen-games-menu.png" width="32%" alt="Games menu">
+  <img src="07_Images/screen-lullaby-run.png" width="32%" alt="Lullaby Run">
+  <img src="07_Images/screen-cypress-night.png" width="32%" alt="Cypress Night">
+</p>
+<p align="center">
+  <img src="07_Images/screen-late-for-tea-title.png" width="32%" alt="Late for Tea title">
   <img src="07_Images/screen-late-for-tea-roses.png" width="32%" alt="Late for Tea: the Garden of Roses">
   <img src="07_Images/screen-late-for-tea-chessboard.png" width="32%" alt="Late for Tea: the Looking-Glass Board">
-  <img src="07_Images/screen-cypress-night.png" width="32%" alt="Cypress Night">
+</p>
+<p align="center">
+  <img src="07_Images/screen-emerald-city-title.png" width="32%" alt="Raise the Emerald City title">
+  <img src="07_Images/screen-emerald-city-forest.png" width="32%" alt="Raise the Emerald City: the Great Forest">
+  <img src="07_Images/screen-emerald-city-spire.png" width="32%" alt="Raise the Emerald City: the great spire at night">
 </p>
 
 ## What it does
@@ -41,6 +51,9 @@ Built on a LilyGo **T-Display-S3-AMOLED-1.64** with an Adafruit ANO click wheel.
 - **Late for Tea:** a 3D dash through ten places from Wonderland. The White Rabbit
   races tortoises on skateboards for the Linzer cookies, with Alice chasing him,
   to reach the Mad Hatter's tea party by four o'clock.
+- **Raise the Emerald City:** a tower-stacking game from *The Wonderful Wizard of
+  Oz*. The Wizard's crane swings each floor; drop it square to bring more people
+  home. Six lands, from Munchkin Country to the Emerald City itself.
 
 **Add songs and organise them from a phone**
 - **Upload:** open **Add songs** on the console, then `jigglypuff.local` in a
@@ -82,8 +95,10 @@ and run it again.
 
 Anywhere:
 - **Brightness:** hold **Down** and turn the wheel. The setting is remembered.
-- **Screen off:** triple-tap **Up**. The music keeps playing. To wake the screen,
-  double-tap any arrow or turn the wheel about 45°.
+- **Screen off (lock):** triple-tap **Up**. The music keeps playing, and the
+  wheel still sets the volume (two clicks a step) without turning the screen
+  on. To wake it, double-tap any arrow; it wakes up right where you left it,
+  on the same song or the same list.
 - **Power:** hold **Select** about 1.2 s to switch off, and about 2 s to switch
   back on.
 - **Touch:** works too. Tap the tiles, the player buttons or "< Home".
@@ -98,7 +113,7 @@ Each game shows its own controls on its title screen; they're also listed in
 | [`1_Examples/`](1_Examples/) | LilyGo's original example sketches for the board. Not part of the console. |
 | [`2_Firmware/`](2_Firmware/) | The main program: screens, menus, buttons, touch, battery and charger, screen sleep, power off. Plus the board's schematic and datasheets. |
 | [`3_Music_App/`](3_Music_App/) | The music library, tag reader, playlists, the Music screens, the player and the PCM5122 DAC driver. Plus the auto-tagger tool. |
-| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night* and *Late for Tea*, with their drawing, rules and synthesised sound. |
+| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea* and *Raise the Emerald City*, with their drawing, rules and synthesised sound. |
 | [`5_Web_Uploader/`](5_Web_Uploader/) | The phone pages: song upload and the organizer. Also clock sync. |
 | [`6_Theme_Graphics/`](6_Theme_Graphics/) | The glass look, the Jigglypuff-pink theme, the landscape screen rotation and the Home artwork. |
 | [`07_Images/`](07_Images/) | Photos of the console and screenshots from it. |
@@ -124,6 +139,10 @@ The full parts list, the pin map with wire colours, and the case files are in
 [`08_BOM/`](08_BOM/).
 
 ## Credits
+
+The title and story cards in *Raise the Emerald City* use W. W. Denslow's 1900
+illustrations for *The Wonderful Wizard of Oz*. They're public domain, from
+Wikimedia Commons.
 
 The title and story cards in *Late for Tea* use John Tenniel's 1865 illustrations
 for *Alice's Adventures in Wonderland*. They're public domain, from Wikimedia
