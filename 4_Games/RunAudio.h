@@ -28,7 +28,8 @@ struct Params {
 };
 void set(const Params &p);
 
-enum Fx : uint8_t { Pop, PopSoft, Bonk, Squeak, Ding, DingHigh, DingTop, Thunder };
+enum Fx : uint8_t { Pop, PopSoft, Bonk, Squeak, Ding, DingHigh, DingTop, Thunder, Hoot, Tick,
+                    Honk, Hop, Gull, Tock };
 void fx(Fx f);
 
 } // namespace RunAudio

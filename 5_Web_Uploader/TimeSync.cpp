@@ -14,6 +14,12 @@ bool TimeSync::_ntpStarted = false;
 // an unset ESP32 clock starts at 1970.
 static const time_t CLOCK_VALID_AFTER = 1704067200;
 
+// WiFi.begin() makes one attempt; if the router doesn't answer (or the
+// link drops later) nothing tries again, so Add songs would sit on
+// "Connecting..." for good. Retry every so often instead.
+static const uint32_t RETRY_MS = 12000;
+static uint32_t s_lastAttempt = 0;
+
 void TimeSync::begin() {
   _hasCredentials = strlen(WIFI_SSID) > 0;
   // The timezone lives in the environment, which doesn't survive a reboot
@@ -27,8 +33,16 @@ void TimeSync::wifiOn() {
   if (!_hasCredentials || _enabled) return;
   _enabled = true;
   _ntpStarted = false;
+  static bool logging = false;
+  if (!logging) {
+    logging = true;
+    WiFi.onEvent([](WiFiEvent_t, WiFiEventInfo_t info) {
+      Serial.printf("WiFi: disconnected, reason %d\n", info.wifi_sta_disconnected.reason);
+    }, ARDUINO_EVENT_WIFI_STA_DISCONNECTED);
+  }
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD); // non-blocking
+  s_lastAttempt = millis();
 }
 
 void TimeSync::wifiOff() {
@@ -39,8 +53,18 @@ void TimeSync::wifiOff() {
 }
 
 void TimeSync::poll() {
-  if (!_enabled || _ntpStarted) return;
-  if (WiFi.status() == WL_CONNECTED) {
+  if (!_enabled) return;
+  if (WiFi.status() != WL_CONNECTED) {
+    if (millis() - s_lastAttempt > RETRY_MS) {
+      s_lastAttempt = millis();
+      Serial.printf("WiFi: not connected (status %d), trying again\n", (int)WiFi.status());
+      WiFi.disconnect();
+      WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    }
+    return;
+  }
+  s_lastAttempt = millis();
+  if (!_ntpStarted) {
     configTzTime(WIFI_TZ, "pool.ntp.org", "time.nist.gov");
     _ntpStarted = true;
   }

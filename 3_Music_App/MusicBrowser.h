@@ -4,12 +4,13 @@
 #include "Input.h"
 #include "Landscape.h"
 
-// The Music app's lists: the top menu (Now playing / Artists / Albums /
-// Playlists), the artist, album and playlist lists, and the songs inside
-// each. Also the "Add to playlist" picker, which opens over any screen.
+// The Music app's screens: the top menu (four tiles - Now playing / Artists
+// / Albums / Playlists), the artist, album and playlist lists, and the songs
+// inside each. Also the "Add to playlist" picker, which opens over any screen.
 //
 //   wheel         move up / down          SELECT  open / play
 //   LEFT / RIGHT  page up / down          UP      back
+//                 (on the tiles: previous / next tile)
 //   DOWN          on a song: add to playlist (or remove, inside a playlist)
 //
 // The main program draws the background and status bar, then calls draw();
@@ -32,6 +33,7 @@ void begin(LandscapeGFX *gfx, const Colors &colors);
 void reset(); // back to the top menu (also after a rescan)
 
 void draw();
+bool atTop(); // showing the tiles (no list panel behind them)
 Action key(Key k);
 Action wheel(int32_t clicks);
 Action tap(int16_t x, int16_t y);

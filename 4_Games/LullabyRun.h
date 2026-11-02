@@ -41,4 +41,7 @@ bool wantsExit();
 // The engine sound is running, so the DAC needs its 5V rail.
 bool wantsAudioPower();
 
+// The last frame drawn (228 x 140 RGB565, landscape), for screenshots.
+const uint16_t *frameBuffer();
+
 } // namespace LullabyRun

@@ -6,7 +6,9 @@
  *   Home        three large glass tiles: Music, Games, Add songs
  *   Music       Artists / Albums / Playlists lists (see MusicBrowser.h)
  *   Now playing the player for the queued songs
- *   Games       Lullaby Run, an 11-district racer (see LullabyRun.h)
+ *   Games       two tiles: Lullaby Run, an 11-district racer (LullabyRun.h),
+ *               Cypress Night, a garden maze chase (CypressNight.h), and
+ *               Late for Tea, a 3D Wonderland dash (LateForTea.h)
  *   Add songs   web page on the home WiFi that uploads straight to the card
  *
  * Controls (ANO wheel):
@@ -51,7 +53,10 @@
 #include "Playlists.h"
 #include "MusicBrowser.h"
 #include "SongUpload.h"
+#include "Organizer.h"
 #include "LullabyRun.h"
+#include "CypressNight.h"
+#include "LateForTea.h"
 #include "WifiConfig.h"
 
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -74,6 +79,12 @@ enum class Screen { Home, Music, NowPlaying, Games, AddSongs };
 Screen screen = Screen::Home;
 
 int homeSel = 0;           // focused tile on Home
+int gamesSel = 0;          // focused tile in Games
+bool gameFailed = false;   // the last game didn't have the memory to start
+
+// The game running inside the Games screen, if any.
+enum class Game : uint8_t { None, Run, Cypress, Tea };
+Game game = Game::None;
 bool musicActive = false;  // the user wants music playing (drives auto-advance)
 bool needsRedraw = true;
 uint32_t volumeShownUntil = 0;
@@ -277,9 +288,10 @@ static const int16_t BTN_PREV_X = 262, BTN_PLAY_X = 318, BTN_NEXT_X = 374;
 void drawLibrary() {
   Glass::background();
   drawStatusBar("< Home");
-  Glass::panel(14, 38, 428, 236, 26, C_NEUTRAL, 30, 40);
+  bool empty = !MusicPlayer::sdReady() || Library::count() == 0;
+  if (empty || !MusicBrowser::atTop()) Glass::panel(14, 38, 428, 236, 26, C_NEUTRAL, 30, 40);
 
-  if (!MusicPlayer::sdReady() || Library::count() == 0) {
+  if (empty) {
     iconMusic(SCREEN_W / 2, 110, 12, C_DIM);
     textCenter(SCREEN_W / 2, 170, MusicPlayer::sdReady() ? "No songs yet" : "No SD card", 2, C_TEXT);
     textCenter(SCREEN_W / 2, 196,
@@ -386,13 +398,61 @@ void drawNowPlaying() {
   textCenter(SCREEN_W / 2, 262, "SELECT play  </> skip (hold: seek)  DOWN add to playlist  WHEEL vol", 1, C_DIM);
 }
 
+// Games menu: one tile per game.
+static const int16_t GTILE_Y = 54, GTILE_W = 136, GTILE_H = 188, GTILE_GAP = 10;
+int16_t gameTileX(int i) { return (int16_t)((SCREEN_W - (3 * GTILE_W + 2 * GTILE_GAP)) / 2 + i * (GTILE_W + GTILE_GAP)); }
+
+void iconTea(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  gfx->fillRoundRect(cx - 14, cy - 34, 9, 28, 4, c);    // bunny ears
+  gfx->fillRoundRect(cx + 5, cy - 34, 9, 28, 4, c);
+  gfx->fillRoundRect(cx - 11, cy - 30, 3, 20, 1, cut);
+  gfx->fillRoundRect(cx + 8, cy - 30, 3, 20, 1, cut);
+  gfx->fillRoundRect(cx - 24, cy - 4, 42, 28, 10, c);   // a teacup
+  gfx->fillCircle(cx + 22, cy + 8, 9, c);
+  gfx->fillCircle(cx + 22, cy + 8, 4, cut);
+  gfx->fillRoundRect(cx - 32, cy + 24, 58, 6, 3, c);    // saucer
+}
+
+void iconCar(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  gfx->fillRoundRect(cx - 34, cy - 4, 68, 20, 8, c);   // body
+  gfx->fillRoundRect(cx - 18, cy - 18, 36, 18, 8, c);  // cabin
+  gfx->fillRoundRect(cx - 13, cy - 14, 26, 9, 3, cut); // window
+  gfx->fillCircle(cx - 20, cy + 16, 8, c);
+  gfx->fillCircle(cx + 20, cy + 16, 8, c);
+  gfx->fillCircle(cx - 20, cy + 16, 3, cut);
+  gfx->fillCircle(cx + 20, cy + 16, 3, cut);
+}
+
+void iconCypress(int16_t cx, int16_t cy, uint16_t c) {
+  gfx->fillCircle(cx + 24, cy - 22, 7, c);              // the moon
+  gfx->fillTriangle(cx - 6, cy + 18, cx + 6, cy + 18, cx, cy - 30, c); // cypress
+  gfx->fillCircle(cx, cy + 8, 8, c);
+  gfx->fillRect(cx - 2, cy + 18, 4, 8, c);
+  gfx->fillTriangle(cx - 30, cy + 22, cx - 20, cy + 22, cx - 25, cy - 6, c); // a smaller one
+}
+
 void drawGames() {
   Glass::background();
   drawStatusBar("< Home");
-  Glass::panel(24, 40, 408, 212, 28, C_GREEN, 60, 40);
-  iconGames(SCREEN_W / 2, 112, C_TEXT, Glass::blend(C_GREEN, 0x0000, 90));
-  textCenter(SCREEN_W / 2, 158, "Games", 2, C_TEXT);
-  textCenter(SCREEN_W / 2, 186, "Not enough memory", 2, C_DIM); // the game failed to start
+  static const char *names[3] = {"Lullaby Run", "Cypress Night", "Late for Tea"};
+  static const char *subs[3] = {"City night racer", "Owls in the garden", "Wonderland dash"};
+  const uint16_t tints[3] = {C_BLUE, C_GREEN, C_PINK};
+  for (int i = 0; i < 3; i++) {
+    bool sel = i == gamesSel;
+    int16_t x = gameTileX(i), y = GTILE_Y, w = GTILE_W, h = GTILE_H;
+    if (sel) { x -= 5; y -= 5; w += 10; h += 10; }
+    Glass::panel(x, y, w, h, 24, tints[i], sel ? 150 : 70, sel ? 140 : 0);
+    int16_t cx = x + w / 2;
+    uint16_t cut = Glass::blend(tints[i], 0x0000, 90);
+    if (i == 0) iconCar(cx, y + 70, C_TEXT, cut);
+    else if (i == 1) iconCypress(cx, y + 70, C_TEXT);
+    else iconTea(cx, y + 70, C_TEXT, cut);
+    // Big type when the name fits the tile, else the small size.
+    uint8_t size = gfx->textWidth(names[i], 2) <= w - 10 ? 2 : 1;
+    textCenter(cx, y + h - (size == 2 ? 62 : 56), names[i], size, sel ? C_TEXT : C_DIM);
+    textCenter(cx, y + h - 32, subs[i], 1, C_DIM);
+  }
+  if (gameFailed) textCenter(SCREEN_W / 2, 258, "Not enough memory for that game", 1, C_RED);
 }
 
 void drawAddSongs() {
@@ -469,10 +529,54 @@ void render() {
 // ---------------------------------------------------------------------------
 
 bool musicWantsPower() {
-  return (musicActive && !MusicPlayer::isPaused()) || LullabyRun::wantsAudioPower();
+  return (musicActive && !MusicPlayer::isPaused()) || LullabyRun::wantsAudioPower() ||
+         CypressNight::wantsAudioPower() || LateForTea::wantsAudioPower();
 }
 
-bool gameActive() { return screen == Screen::Games && LullabyRun::active(); }
+// --- whichever game is running ------------------------------------------------
+
+bool gameActive() {
+  if (screen != Screen::Games) return false;
+  return (game == Game::Run && LullabyRun::active()) || (game == Game::Cypress && CypressNight::active()) ||
+         (game == Game::Tea && LateForTea::active());
+}
+
+void gameExit() {
+  if (game == Game::Run) LullabyRun::exit();
+  else if (game == Game::Cypress) CypressNight::exit();
+  else if (game == Game::Tea) LateForTea::exit();
+  game = Game::None;
+}
+
+void gameKey(const InputEvent &ev) {
+  if (game == Game::Run) LullabyRun::key(ev);
+  else if (game == Game::Cypress) CypressNight::key(ev);
+  else if (game == Game::Tea) LateForTea::key(ev);
+}
+
+void gameFrame(int32_t wheel) {
+  if (game == Game::Run) LullabyRun::frame(input, touch, wheel);
+  else if (game == Game::Cypress) CypressNight::frame(input, touch, wheel);
+  else if (game == Game::Tea) LateForTea::frame(input, touch, wheel);
+}
+
+void gamePause() {
+  if (game == Game::Run) LullabyRun::pause();
+  else if (game == Game::Cypress) CypressNight::pause();
+  else if (game == Game::Tea) LateForTea::pause();
+}
+
+bool gameWantsExit() {
+  return (game == Game::Run && LullabyRun::wantsExit()) || (game == Game::Cypress && CypressNight::wantsExit()) ||
+         (game == Game::Tea && LateForTea::wantsExit());
+}
+
+// Triple-tapping UP turns the screen off - except mid-maze, where UP walks.
+bool gameUpSleepAllowed() {
+  if (game == Game::Cypress) return CypressNight::upSleepAllowed();
+  if (game == Game::Tea) return LateForTea::upSleepAllowed();
+  return true;
+}
 
 void recoverCodec() {
   static bool lost = false;
@@ -548,12 +652,38 @@ void startMusic(uint16_t index) {
   powerAudioNow();
 }
 
+// Starts game i from the Games menu. A game's sound needs the DAC, so the
+// music stops while it runs.
+void launchGame(int i) {
+  MusicPlayer::stop();
+  musicActive = false;
+  bool ok = i == 0 ? LullabyRun::enter(gfx, canvas, panel)
+          : i == 1 ? CypressNight::enter(gfx, panel) : LateForTea::enter(gfx, panel);
+  gameFailed = !ok;
+  if (ok) {
+    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : Game::Tea;
+    Pcm5122::setMute(false); // a paused track leaves the DAC muted
+    powerAudioNow();
+  }
+  needsRedraw = true;
+}
+
+// Back from a game to the Games menu.
+void leaveGame() {
+  gameExit();
+  needsRedraw = true;
+}
+
 void goHome() {
-  if (gameActive()) LullabyRun::exit();
+  if (gameActive()) gameExit();
+  game = Game::None;
   if (screen == Screen::AddSongs) {
     SongUpload::stop();
     TimeSync::wifiOff(); // WiFi only lives while Add Songs is open
-    if (SongUpload::filesAdded() > 0) Library::markDirty(); // read the new songs next time
+    // Read new songs next time, unless the organizer already rescanned
+    // after them. Its edits and playlist changes are already in place.
+    if (SongUpload::filesAdded() != Organizer::uploadsAtLastScan()) Library::markDirty();
+    MusicBrowser::reset();
   }
   seeking = false;
   screen = Screen::Home;
@@ -565,14 +695,9 @@ void openApp(int i) {
     screen = Screen::Music;
     ensureLibrary();
   } else if (i == 1) {
-    screen = Screen::Games;
-    // The engine sound needs the DAC, so the music stops for the race.
-    MusicPlayer::stop();
-    musicActive = false;
-    if (LullabyRun::enter(gfx, canvas, panel)) {
-      Pcm5122::setMute(false); // a paused track leaves the DAC muted
-      powerAudioNow();
-    }
+    screen = Screen::Games; // the menu; music keeps playing until a game starts
+    game = Game::None;
+    gameFailed = false;
   } else {
     screen = Screen::AddSongs;
     // The audio task reads the card from the other core; the SD driver
@@ -873,11 +998,11 @@ void handleGameKey(const InputEvent &ev) {
       selectArmed = false;
     }
   }
-  if (ev.pressed) {
-    if (ev.key == Key::Up) {
+  if (ev.pressed && !ev.repeat) {
+    if (ev.key == Key::Up && gameUpSleepAllowed()) {
       if (countTap(Key::Up) >= 3) {
         resetTaps();
-        LullabyRun::pause();
+        gamePause();
         sleepDisplay();
         return;
       }
@@ -885,8 +1010,8 @@ void handleGameKey(const InputEvent &ev) {
       resetTaps();
     }
   }
-  LullabyRun::key(ev);
-  if (LullabyRun::wantsExit()) goHome();
+  gameKey(ev);
+  if (gameWantsExit()) leaveGame();
 }
 
 void handleKey(const InputEvent &ev) {
@@ -914,6 +1039,7 @@ void handleKey(const InputEvent &ev) {
       selectArmed = false;
       if (picker) browserAction(MusicBrowser::pickerKey(Key::Select));
       else if (screen == Screen::Home) openApp(homeSel);
+      else if (screen == Screen::Games) launchGame(gamesSel);
       else if (screen == Screen::Music) browserAction(MusicBrowser::key(Key::Select));
       else if (screen == Screen::NowPlaying) playPause();
     }
@@ -984,6 +1110,9 @@ void handleKey(const InputEvent &ev) {
     case Screen::NowPlaying:
       break;
     case Screen::Games:
+      if (ev.key == Key::Left && gamesSel > 0) { gamesSel--; needsRedraw = true; }
+      if (ev.key == Key::Right && gamesSel < 2) { gamesSel++; needsRedraw = true; }
+      break;
     case Screen::AddSongs:
       if (ev.key == Key::Left) goHome();
       break;
@@ -1017,6 +1146,14 @@ void handleTouch() {
     }
   } else if (screen == Screen::Music) {
     browserAction(MusicBrowser::tap(x, y));
+  } else if (screen == Screen::Games) {
+    for (int i = 0; i < 3; i++) {
+      if (x >= gameTileX(i) && x < gameTileX(i) + GTILE_W && y >= GTILE_Y && y < GTILE_Y + GTILE_H) {
+        gamesSel = i;
+        launchGame(i);
+        return;
+      }
+    }
   } else if (screen == Screen::NowPlaying) {
     auto near = [&](int16_t cx, int16_t r) {
       int16_t dx = x - cx, dy = y - BTN_Y;
@@ -1038,10 +1175,12 @@ void handleWheel(int32_t delta) {
     changeBrightness(delta > 0 ? 1 : -1);
   } else if (MusicBrowser::pickerOpen()) {
     browserAction(MusicBrowser::pickerWheel(delta));
-  } else if (screen == Screen::Home) {
+  } else if (screen == Screen::Home || screen == Screen::Games) {
+    int &sel = screen == Screen::Home ? homeSel : gamesSel;
+    int maxSel = 2; // three tiles on both screens
     wheelAcc += delta;
-    while (wheelAcc >= 2) { wheelAcc -= 2; if (homeSel < 2) homeSel++; needsRedraw = true; }
-    while (wheelAcc <= -2) { wheelAcc += 2; if (homeSel > 0) homeSel--; needsRedraw = true; }
+    while (wheelAcc >= 2) { wheelAcc -= 2; if (sel < maxSel) sel++; needsRedraw = true; }
+    while (wheelAcc <= -2) { wheelAcc += 2; if (sel > 0) sel--; needsRedraw = true; }
   } else if (screen == Screen::Music) {
     browserAction(MusicBrowser::wheel(delta));
   } else if (screen == Screen::NowPlaying) {
@@ -1057,14 +1196,15 @@ void serialCommands() {
   char c = Serial.read();
   Key k = c == 's' ? Key::Select : c == 'u' ? Key::Up : c == 'd' ? Key::Down
         : c == 'l' ? Key::Left : c == 'r' ? Key::Right : Key::None;
-  if (c == 'g' && screen == Screen::Home) openApp(1);
-  else if (c == 'm' && screen == Screen::Home) openApp(0);
+  if ((c == 'g' || c == 'c') && screen == Screen::Home) {
+    openApp(1);
+    launchGame(c == 'g' ? 0 : 1);
+  } else if (c == 'm' && screen == Screen::Home) openApp(0);
   else if (c == 'h') goHome();
-  else if (gameActive()) {
-    if (k != Key::None) {
-      LullabyRun::key({k, true, false});
-      LullabyRun::key({k, false, false});
-    }
+  else if (gameActive() && k != Key::None) { // (screenshots etc. still work in a game)
+    gameKey({k, true, false});
+    gameKey({k, false, false});
+    if (gameWantsExit()) leaveGame();
   } else if (k != Key::None) {
     handleKey({k, true, false});
     handleKey({k, false, false});
@@ -1075,6 +1215,41 @@ void serialCommands() {
     handleKey({h, false, false});
   } else if (c == '+' || c == '-') {
     handleWheel(c == '+' ? 1 : -1);
+  } else if (c == 'S') {
+    // Screenshot: raw RGB565 of what's on screen - the maze game's half-res
+    // frame, or the canvas (portrait, as the panel sees it).
+    const uint16_t *fb = canvas->getFramebuffer();
+    int w = LCD_WIDTH, h = LCD_HEIGHT;
+    if (game == Game::Cypress && gameActive()) { fb = CypressNight::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Tea && gameActive()) { fb = LateForTea::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Run && gameActive()) { fb = LullabyRun::frameBuffer(); w = 228; h = 140; }
+    Serial.printf("\nSHOT %d %d %d\n", w, h, (int)gfx->flipped());
+    Serial.write((const uint8_t *)fb, (size_t)w * h * 2);
+    Serial.println();
+  } else if (c == 'A' && game == Game::Tea) {
+    LateForTea::benchUnlockAll();
+  } else if (c == 'Z' && game == Game::Tea) {
+    LateForTea::benchLineup();
+  } else if (c == 'I') {
+    // The same rescan the web organizer runs (only sensible from Add songs).
+    MusicPlayer::clearQueue();
+    Library::scan();
+    Playlists::load();
+  } else if (c == 'T') {
+    // Step the WiFi transmit power down (wraps back to full), to find the
+    // level this board/case transmits cleanly at.
+    static const wifi_power_t levels[] = {WIFI_POWER_19_5dBm, WIFI_POWER_15dBm, WIFI_POWER_11dBm,
+                                          WIFI_POWER_8_5dBm, WIFI_POWER_5dBm};
+    static int lv = 0;
+    lv = (lv + 1) % 5;
+    WiFi.setTxPower(levels[lv]);
+    Serial.printf("WiFi TX power now %.1f dBm\n", WiFi.getTxPower() / 4.0f);
+  } else if (c == 'i') {
+    Serial.printf("info: screen %d, SD %d, library ready %d dirty %d, %u songs, %u playlists, "
+                  "PSRAM free %u (largest %u), heap free %u, IP %s, WiFi signal %d dBm\n",
+                  (int)screen, MusicPlayer::sdReady(), Library::ready(), Library::dirty(), Library::count(),
+                  Playlists::count(), ESP.getFreePsram(), ESP.getMaxAllocPsram(), ESP.getFreeHeap(),
+                  WiFi.localIP().toString().c_str(), (int)WiFi.RSSI());
   }
 }
 
@@ -1131,14 +1306,16 @@ void loop() {
   }
   if (gameActive()) {
     // The game owns the wheel (steering) and draws its own frames.
-    if (!displayAsleep) LullabyRun::frame(input, touch, delta);
+    if (!displayAsleep) gameFrame(delta);
     delta = 0;
   }
   handleWheel(delta);
   if (MusicBrowser::toastEnded()) needsRedraw = true;
 
   if (screen == Screen::AddSongs) {
-    if (!SongUpload::running()) SongUpload::start();
+    if (!SongUpload::running() && SongUpload::start()) {
+      Serial.printf("Add songs: http://%s (or jigglypuff.local)\n", WiFi.localIP().toString().c_str());
+    }
     SongUpload::poll();
   }
 

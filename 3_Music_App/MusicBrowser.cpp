@@ -61,19 +61,18 @@ void clip(const char *s, int maxChars, char *out, size_t outLen) {
 
 // --- rows for each kind of list ------------------------------------------------
 
+// The top menu is a 2 x 2 grid of tiles, in this order.
 enum RootItem { R_NOW, R_ARTISTS, R_ALBUMS, R_PLAYLISTS };
-int rootItems(RootItem *out) {
-  int n = 0;
-  if (MusicPlayer::queueLength() > 0) out[n++] = R_NOW;
-  out[n++] = R_ARTISTS;
-  out[n++] = R_ALBUMS;
-  out[n++] = R_PLAYLISTS;
-  return n;
+const int16_t TILE_X0 = 24, TILE_Y0 = 46, TILE_W = 200, TILE_H = 106, TILE_GAP = 8;
+
+void tileRect(int i, int16_t &x, int16_t &y) {
+  x = TILE_X0 + (i % 2) * (TILE_W + TILE_GAP);
+  y = TILE_Y0 + (i / 2) * (TILE_H + TILE_GAP);
 }
 
 int countOf(Kind k) {
   switch (k) {
-    case Kind::Root: { RootItem r[4]; return rootItems(r); }
+    case Kind::Root: return 4;
     case Kind::Artists: return Library::artistCount();
     case Kind::Albums: return Library::albumCount();
     case Kind::Playlists: return Playlists::count() + 1; // + "New playlist"
@@ -98,26 +97,7 @@ void rowText(Kind k, int i, char *left, size_t ll, char *right, size_t rl, bool 
   left[0] = right[0] = '\0';
   playing = false;
   switch (k) {
-    case Kind::Root: {
-      RootItem r[4];
-      rootItems(r);
-      if (r[i] == R_NOW) {
-        strlcpy(left, "Now playing", ll);
-        uint16_t id = MusicPlayer::currentTrack();
-        if (id != Library::NONE) strlcpy(right, Library::track(id).title, rl);
-        playing = true;
-      } else if (r[i] == R_ARTISTS) {
-        strlcpy(left, "Artists", ll);
-        snprintf(right, rl, "%u", Library::artistCount());
-      } else if (r[i] == R_ALBUMS) {
-        strlcpy(left, "Albums", ll);
-        snprintf(right, rl, "%u", Library::albumCount());
-      } else {
-        strlcpy(left, "Playlists", ll);
-        snprintf(right, rl, "%u", Playlists::count());
-      }
-      break;
-    }
+    case Kind::Root: break; // drawn as tiles, see drawTiles()
     case Kind::Artists:
       strlcpy(left, Library::artistName(i), ll);
       snprintf(right, rl, "%u", Library::artistSongs(i));
@@ -239,6 +219,74 @@ MusicBrowser::Action pickChoose() {
   return MusicBrowser::Action::Redraw;
 }
 
+// --- the top menu's tiles ----------------------------------------------------
+
+void iconNowPlaying(int16_t cx, int16_t cy, uint16_t c, uint16_t cut, bool paused) {
+  g->fillCircle(cx, cy, 20, c);
+  if (paused) {
+    g->fillTriangle(cx - 6, cy - 10, cx - 6, cy + 10, cx + 11, cy, cut);
+  } else {
+    g->fillRect(cx - 8, cy - 9, 6, 18, cut);
+    g->fillRect(cx + 2, cy - 9, 6, 18, cut);
+  }
+}
+
+void iconArtist(int16_t cx, int16_t cy, uint16_t c) {
+  g->fillCircle(cx, cy - 9, 9, c);                  // head
+  g->fillRoundRect(cx - 17, cy + 3, 34, 18, 9, c);  // shoulders
+}
+
+void iconAlbum(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  g->fillCircle(cx, cy, 20, c);
+  g->drawCircle(cx, cy, 14, cut);
+  g->fillCircle(cx, cy, 5, cut);
+}
+
+void iconPlaylist(int16_t cx, int16_t cy, uint16_t c) {
+  for (int i = 0; i < 3; i++) g->fillRoundRect(cx - 20, cy - 14 + i * 10, i == 2 ? 16 : 24, 5, 2, c);
+  g->fillCircle(cx + 12, cy + 12, 6, c); // a note at the end of the list
+  g->fillRect(cx + 15, cy - 12, 3, 24, c);
+  g->fillRect(cx + 15, cy - 12, 9, 3, c);
+}
+
+void drawTiles(int sel) {
+  static const char *labels[4] = {"Now playing", "Artists", "Albums", "Playlists"};
+  const uint16_t tints[4] = {C.pink, C.blue, C.green, C.neutral};
+  uint16_t now = MusicPlayer::currentTrack();
+  for (int i = 0; i < 4; i++) {
+    int16_t x, y, w = TILE_W, h = TILE_H;
+    tileRect(i, x, y);
+    bool on = (i == sel);
+    if (on) { x -= 4; y -= 4; w += 8; h += 8; } // the focused tile grows and glows, as on Home
+    Glass::panel(x, y, w, h, 24, tints[i], on ? 150 : 70, on ? 140 : 0);
+
+    int16_t cx = x + w / 2, cy = y + 34;
+    uint16_t cut = Glass::blend(tints[i], 0x0000, 90);
+    switch (i) {
+      case R_NOW: iconNowPlaying(cx, cy, C.text, cut, MusicPlayer::isPaused() || now == Library::NONE); break;
+      case R_ARTISTS: iconArtist(cx, cy, C.text); break;
+      case R_ALBUMS: iconAlbum(cx, cy, C.text, cut); break;
+      case R_PLAYLISTS: iconPlaylist(cx, cy, C.text); break;
+    }
+    int16_t lw = (int16_t)strlen(labels[i]) * CHAR_W;
+    text(cx - lw / 2, y + 62, labels[i], 2, on ? C.text : C.dim);
+
+    char sub[40], clipped[34];
+    switch (i) {
+      case R_NOW:
+        if (now == Library::NONE) strlcpy(sub, "Nothing yet", sizeof(sub));
+        else strlcpy(sub, Library::track(now).title, sizeof(sub));
+        break;
+      case R_ARTISTS: snprintf(sub, sizeof(sub), "%u artists", Library::artistCount()); break;
+      case R_ALBUMS: snprintf(sub, sizeof(sub), "%u albums", Library::albumCount()); break;
+      default: snprintf(sub, sizeof(sub), "%u playlists", Playlists::count()); break;
+    }
+    clip(sub, (w - 20) / 6, clipped, sizeof(clipped));
+    int16_t sw = (int16_t)strlen(clipped) * 6;
+    text(cx - sw / 2, y + 86, clipped, 1, C.dim);
+  }
+}
+
 } // namespace
 
 namespace MusicBrowser {
@@ -251,14 +299,21 @@ void begin(LandscapeGFX *gfx, const Colors &colors) {
 
 void reset() {
   depth = 0;
-  stack[0] = {Kind::Root, 0, 0};
+  // Start on "Now playing" when something is queued, otherwise Artists.
+  stack[0] = {Kind::Root, (int16_t)(MusicPlayer::queueLength() ? R_NOW : R_ARTISTS), 0};
   pickOpen = false;
 }
 
 uint16_t playIndex() { return chosen; }
 
+bool atTop() { return cur().kind == Kind::Root; }
+
 void draw() {
   Level &l = cur();
+  if (l.kind == Kind::Root) {
+    drawTiles(l.sel);
+    return;
+  }
   int count = countOf(l.kind);
   keepVisible(l, count);
 
@@ -333,9 +388,7 @@ static Action choose() {
   if (count == 0) return Action::None;
   switch (l.kind) {
     case Kind::Root: {
-      RootItem r[4];
-      rootItems(r);
-      switch (r[l.sel]) {
+      switch (l.sel) {
         case R_NOW: return Action::ShowPlayer;
         case R_ARTISTS: push(Kind::Artists); break;
         case R_ALBUMS: push(Kind::Albums); break;
@@ -368,6 +421,13 @@ static Action choose() {
 Action key(Key k) {
   Level &l = cur();
   int count = countOf(l.kind);
+  if (l.kind == Kind::Root && (k == Key::Left || k == Key::Right)) {
+    // Tiles: LEFT / RIGHT step through them (across, then down).
+    int s = l.sel + (k == Key::Right ? 1 : -1);
+    if (s < 0 || s >= count) return Action::None;
+    l.sel = s;
+    return Action::Redraw;
+  }
   switch (k) {
     case Key::Select: return choose();
     case Key::Up:
@@ -391,6 +451,17 @@ Action wheel(int32_t clicks) {
   Level &l = cur();
   int count = countOf(l.kind);
   if (count == 0) return Action::None;
+  if (l.kind == Kind::Root) {
+    // Two clicks per tile, as on Home, so a nudge doesn't skip one.
+    static int32_t acc = 0;
+    acc += clicks;
+    int s = l.sel;
+    while (acc >= 2) { acc -= 2; if (s < count - 1) s++; }
+    while (acc <= -2) { acc += 2; if (s > 0) s--; }
+    if (s == l.sel) return Action::None;
+    l.sel = s;
+    return Action::Redraw;
+  }
   l.sel += clicks;
   keepVisible(l, count);
   return Action::Redraw;
@@ -399,6 +470,17 @@ Action wheel(int32_t clicks) {
 Action tap(int16_t x, int16_t y) {
   Level &l = cur();
   int count = countOf(l.kind);
+  if (l.kind == Kind::Root) {
+    for (int i = 0; i < count; i++) {
+      int16_t tx, ty;
+      tileRect(i, tx, ty);
+      if (x >= tx && x < tx + TILE_W && y >= ty && y < ty + TILE_H) {
+        l.sel = i;
+        return choose();
+      }
+    }
+    return Action::None;
+  }
   if (y < ROW_Y0 || x < LIST_X || x > LIST_X + LIST_W) return Action::None;
   int r = (y - ROW_Y0) / ROW_H;
   if (r >= ROWS || l.top + r >= count) return Action::None;

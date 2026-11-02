@@ -1,6 +1,7 @@
 #include "LullabyRun.h"
 #include "Raster.h"
 #include "RunAudio.h"
+#include "HalfRes.h"
 #include "Glass.h"
 #include <Arduino.h>
 #include <Preferences.h>
@@ -760,10 +761,14 @@ static void update(float dt, float steerIn, bool brakeIn) {
     if (ev) P.boost = fmaxf(0, P.boost - dt * 0.05f * sp);
   }
 
+  // Steering has to beat the bends' outward pull at any speed, or holding
+  // LEFT/RIGHT feels ignored: at full speed on the sharpest bend (curve 6)
+  // the pull is 2*0.18*6 = 2.2 road-widths/s against 3.2 of steering. Some
+  // steering at low speed too, so the car can always be lined up.
   float grip = D->wet ? 0.82f : 1;
   float dx = dt * 2 * sp;
-  P.x += steer * dx * grip * (P.spin > 0 ? 0.3f : 1);
-  P.x -= dx * sp * pseg.curve * 0.3f;
+  P.x += steer * dt * (1.2f + 2.0f * sp) * grip * (P.spin > 0 ? 0.3f : 1);
+  P.x -= dx * sp * pseg.curve * 0.18f;
   if (D->fx & FX_WIND) P.x += sinf(s_t * 0.7f) * sinf(s_t * 0.23f) * 0.35f * dt * sp;
   if (throttle) P.speed += accel * dt;
   else if (brake) {
@@ -1860,39 +1865,8 @@ static void hud() {
   }
 }
 
-// Half-res landscape frame -> panel, straight from internal RAM. Each frame
-// column becomes two identical portrait rows of 280 pixels, each pixel
-// doubled; rows go out in batches of 16 to keep the bus busy.
-static void present() {
-  static uint16_t rows[16 * H];
-  const int PW = H; // portrait row length, 280
-  bool flipped = s_gfx->flipped();
-  for (int py0 = 0; py0 < W; py0 += 16) {
-    int n = W - py0 < 16 ? W - py0 : 16; // 456 isn't a multiple of 16: the last batch is 8
-    for (int r = 0; r < n; r += 2) {
-      int py = py0 + r;
-      int lx = flipped ? py / 2 : (W - 1 - py) / 2;
-      uint16_t *d = rows + r * PW;
-      const uint16_t *col = s_frame + lx;
-      if (flipped) {
-        // portrait px -> landscape y = 279 - px
-        for (int ly = FH - 1; ly >= 0; ly--) {
-          uint16_t p = col[ly * FW];
-          *d++ = p;
-          *d++ = p;
-        }
-      } else {
-        for (int ly = 0; ly < FH; ly++) {
-          uint16_t p = col[ly * FW];
-          *d++ = p;
-          *d++ = p;
-        }
-      }
-      memcpy(rows + (r + 1) * PW, rows + r * PW, PW * 2);
-    }
-    s_panel->draw16bitRGBBitmap(0, py0, rows, PW, n);
-  }
-}
+// Half-res landscape frame -> panel, straight from internal RAM.
+static void present() { HalfRes::present(s_panel, s_gfx->flipped(), s_frame); }
 
 static uint32_t s_us[6]; // time spent per render stage, for the fps report
 
@@ -1989,6 +1963,7 @@ void exit() {
 }
 
 bool active() { return s_active; }
+const uint16_t *frameBuffer() { return s_frame; }
 bool wantsExit() { return s_exit; }
 bool wantsAudioPower() { return s_active && RunAudio::running(); }
 
@@ -2054,14 +2029,14 @@ void frame(Input &input, TouchInput &touch, int32_t wheel) {
   // Steering: arrows held, plus the wheel as a self-centring nudge.
   float steer = (input.held(Key::Left) ? -1.0f : 0) + (input.held(Key::Right) ? 1.0f : 0);
   if (s_mode == Mode::Race) {
-    s_wheel = clampf(s_wheel + wheel * 0.55f, -1.5f, 1.5f);
+    s_wheel = clampf(s_wheel + wheel * 0.8f, -1.5f, 1.5f);
   } else if (s_mode == Mode::Pick && wheel != 0) {
     static int32_t wacc = 0;
     wacc += wheel;
     while (wacc >= 2) { wacc -= 2; if (s_dIndex < NUM_DIST - 1) setDistrict(s_dIndex + 1); }
     while (wacc <= -2) { wacc += 2; if (s_dIndex > 0) setDistrict(s_dIndex - 1); }
   }
-  float decay = dt * 4;
+  float decay = dt * 3;
   s_wheel = fabsf(s_wheel) <= decay ? 0 : s_wheel - (s_wheel > 0 ? decay : -decay);
   steer = clampf(steer + s_wheel, -1, 1);
   if (touch.pressed() && s_mode == Mode::Race) {

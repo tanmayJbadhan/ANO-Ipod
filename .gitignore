@@ -5,6 +5,9 @@
 # holds the home WiFi password - copy WifiConfig.example.h instead
 5_Web_Uploader/WifiConfig.h
 
+# autotag.py's output (lists your songs; the undo file is per-console)
+3_Music_App/tools/autotag-*.json
+
 # parked files waiting to be thrown away
 deleted/
 

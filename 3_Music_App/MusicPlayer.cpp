@@ -123,7 +123,16 @@ bool MusicPlayer::beginSd() {
   sdSPI.begin(SD_SCK_PIN, SD_MISO_PIN, SD_MOSI_PIN, SD_CS_PIN);
   // Room for 10 open files: the library scan holds one directory per
   // folder level plus the song whose tags it is reading.
-  _sdReady = SD.begin(SD_CS_PIN, sdSPI, 4000000, "/sd", 10);
+  // 20 MHz: at the 4 MHz default, reading an M4A's header before it could
+  // start took ~4 s, and opening Music ~6 s. The card checks every block's
+  // CRC, so a bad read shows up as a retry, not silent garbage; if the card
+  // won't start that fast at all, fall back.
+  _sdReady = SD.begin(SD_CS_PIN, sdSPI, SD_SPI_HZ, "/sd", 10);
+  if (!_sdReady) {
+    SD.end();
+    _sdReady = SD.begin(SD_CS_PIN, sdSPI, 4000000, "/sd", 10);
+    Serial.printf("SD: %u MHz failed, using 4 MHz\n", (unsigned)(SD_SPI_HZ / 1000000));
+  }
   if (!_sdReady) {
     _lastError = "SD.begin failed - check wiring/card";
   }

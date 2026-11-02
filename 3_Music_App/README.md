@@ -29,6 +29,24 @@ Music is slow. After that, only new songs are read. After **Add songs** the next
 visit picks up the new files automatically. If you change a song's tags on a
 computer, delete that file to make the console read everything again.
 
+**Fixing song details automatically**: `tools/autotag.py` runs on a PC on the same
+WiFi while **Add songs** is open. It looks up every song with a garbled or missing
+title, artist or album on [MusicBrainz](https://musicbrainz.org), using its tags,
+file name and folder name ("Artist - Album" folders help a lot). It only accepts
+matches it's sure of, and writes Japanese, Chinese and Korean names in Latin letters
+so the screen can show them.
+
+```
+pip install pykakasi pypinyin unidecode
+python tools/autotag.py --console http://jigglypuff.local          # report only
+python tools/autotag.py --console http://jigglypuff.local --apply  # send to the console
+python tools/autotag.py --console http://jigglypuff.local --undo   # put back the last --apply
+```
+
+`--undo` only works until the library is next rescanned (song numbers change). The
+changes are stored like hand edits, in `/.jiggly/edits.txt`. Songs it can't
+identify are left alone; fix those in the web organizer.
+
 **Sound quality notes**
 - The audio decoder library (`../libraries/ESP32-audioI2S`) is patched (search for
   `JIGGLYPUFF PATCH`): the original halved every sample and ran tone filters on it.

@@ -17,8 +17,11 @@ uint16_t size(uint8_t i);
 uint16_t songs(uint8_t i, uint16_t *out, uint16_t max);
 bool contains(uint8_t i, uint16_t trackId);
 
-// Makes the next "Playlist N". Returns its index, or -1.
-int create();
+// Makes the next "Playlist N", or one with the given name (from the web
+// organizer). Returns its index, or -1 (also if the name is taken).
+int create(const char *name = nullptr);
+bool rename(uint8_t i, const char *name);
+bool erase(uint8_t i); // deletes the playlist, not the songs
 // Both save straight to the card. add() is false if the song was already in it.
 bool add(uint8_t i, uint16_t trackId);
 bool remove(uint8_t i, uint16_t trackId);

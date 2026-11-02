@@ -3,14 +3,26 @@
 #include <Arduino.h>
 #include <SD.h>
 #include <dirent.h>
+#include <errno.h>
 #include <string.h>
 #include <strings.h>
 #include <stdlib.h>
+#include <vector>
+
+namespace Library {
+const char *const UNKNOWN_ARTIST = "Unknown artist";
+const char *const UNKNOWN_ALBUM = "Unknown album";
+const char *const UNTITLED = "Untitled";
+} // namespace Library
 
 namespace {
 
+using Library::UNKNOWN_ARTIST;
+using Library::UNKNOWN_ALBUM;
+
 const char *CACHE_DIR = "/.jiggly";
 const char *CACHE_PATH = "/.jiggly/library.txt";
+const char *EDITS_PATH = "/.jiggly/edits.txt";
 const char *CACHE_MAGIC = "JLIB1";
 const int MAX_DEPTH = 4;
 
@@ -41,8 +53,7 @@ uint16_t nAlbums = 0;
 bool isReady = false;
 bool isDirty = true;
 
-const char *UNKNOWN_ARTIST = "Unknown artist";
-const char *UNKNOWN_ALBUM = "Unknown album";
+std::vector<uint16_t> editedIds; // waiting for commitEdits()
 
 uint32_t hashExact(const char *s) {
   uint32_t h = 2166136261u;
@@ -171,7 +182,7 @@ bool fill(Track &t, const char *path, const Tags &tags) {
   if (!albumArtist[0]) strlcpy(albumArtist, artist, sizeof(albumArtist));
 
   t.path = poolCopy(path);
-  t.title = poolCopy(title[0] ? title : "Untitled");
+  t.title = poolCopy(title[0] ? title : Library::UNTITLED);
   t.artist = intern(artist[0] ? artist : UNKNOWN_ARTIST);
   t.albumArtist = intern(albumArtist[0] ? albumArtist : UNKNOWN_ARTIST);
   t.album = intern(album[0] ? album : UNKNOWN_ALBUM);
@@ -248,6 +259,59 @@ void saveCache() {
   f.close();
 }
 
+// --- hand edits: one line per edit, path \t title \t artist \t album ----------
+// Later lines win, so an edit is just appended.
+
+void applyText(Track &t, const char *title, const char *artist, const char *album) {
+  if (title && *title) {
+    const char *p = poolCopy(title);
+    if (p) t.title = p;
+  }
+  if (artist && *artist) {
+    const char *p = intern(artist);
+    if (p) t.artist = t.albumArtist = p; // the artist is also who it's filed under
+  }
+  if (album && *album) {
+    const char *p = intern(album);
+    if (p) t.album = p;
+  }
+}
+
+void applyEdits() {
+  if (!SD.exists(EDITS_PATH)) return;
+  File f = SD.open(EDITS_PATH, FILE_READ);
+  if (!f) return;
+  size_t total = f.size();
+  char *buf = (char *)ps_malloc(total + 1);
+  if (!buf) { f.close(); return; }
+  total = f.read((uint8_t *)buf, total);
+  f.close();
+  buf[total] = '\0';
+
+  uint16_t applied = 0;
+  for (char *line = buf; line && *line;) {
+    char *nl = strchr(line, '\n');
+    if (nl) *nl = '\0';
+    size_t n = strlen(line);
+    if (n && line[n - 1] == '\r') line[n - 1] = '\0';
+    char *field[4] = {line, nullptr, nullptr, nullptr};
+    for (int k = 1; k < 4 && field[k - 1]; k++) {
+      char *tab = strchr(field[k - 1], '\t');
+      if (tab) { *tab = '\0'; field[k] = tab + 1; }
+    }
+    if (field[3]) {
+      uint16_t id = pathFind(field[0]);
+      if (id != Library::NONE) {
+        applyText(tracks[id], field[1], field[2], field[3]);
+        applied++;
+      }
+    }
+    line = nl ? nl + 1 : nullptr;
+  }
+  free(buf);
+  if (applied) Serial.printf("Library: %u hand edits applied\n", applied);
+}
+
 // --- walking the card ---------------------------------------------------------
 
 struct ScanState {
@@ -311,7 +375,10 @@ void walk(ScanState &st, const char *dirPath, int depth) {
   char vfs[300];
   snprintf(vfs, sizeof(vfs), "/sd%s", dirPath);
   DIR *d = opendir(vfs);
-  if (!d) return;
+  if (!d) {
+    Serial.printf("Library: can't open folder %s (errno %d)\n", vfs, errno);
+    return;
+  }
   char path[256];
   struct dirent *e;
   while ((e = readdir(d)) != nullptr) {
@@ -419,6 +486,14 @@ bool scan(ProgressFn progress) {
   ScanState st = {progress, 0, 0, false, 0, millis()};
   walk(st, "/", 0);
 
+  // A card that suddenly lists nothing is a read failure, not an empty
+  // card: don't let it wipe the cache (that would mean minutes of
+  // re-reading tags next time).
+  if (st.found == 0 && cached > 0) {
+    Serial.printf("Library: card listed no songs (cache has %u) - keeping the cache\n", cached);
+    for (uint16_t i = 0; i < trackCount; i++) seen[i] = 1;
+  }
+
   // Drop songs that are no longer on the card.
   uint16_t kept = 0;
   for (uint16_t i = 0; i < trackCount; i++) {
@@ -429,6 +504,7 @@ bool scan(ProgressFn progress) {
   rebuildPathTable();
 
   if (st.changed) saveCache();
+  applyEdits(); // after saving, so the cache always holds what the tags say
   buildViews();
   isReady = true;
   isDirty = false;
@@ -450,6 +526,37 @@ const Track &track(uint16_t id) {
 }
 
 uint16_t findByPath(const char *path) { return isReady ? pathFind(path) : NONE; }
+
+bool setText(uint16_t id, const char *title, const char *artist, const char *album) {
+  if (!isReady || id >= trackCount) return false;
+  char t[96], ar[64], al[80];
+  t[0] = ar[0] = al[0] = '\0';
+  if (title) TagReader::foldUtf8(title, t, sizeof(t));
+  if (artist) TagReader::foldUtf8(artist, ar, sizeof(ar));
+  if (album) TagReader::foldUtf8(album, al, sizeof(al));
+  for (char *s : {t, ar, al}) {
+    for (char *c = s; *c; c++) if (*c == '\t') *c = ' ';
+  }
+  applyText(tracks[id], t, ar, al);
+  editedIds.push_back(id);
+  return true;
+}
+
+void commitEdits() {
+  if (editedIds.empty()) return;
+  SD.mkdir(CACHE_DIR);
+  File f = SD.open(EDITS_PATH, FILE_APPEND);
+  if (f) {
+    for (uint16_t id : editedIds) {
+      const Track &t = tracks[id];
+      f.printf("%s\t%s\t%s\t%s\n", t.path, t.title, t.artist, t.album);
+    }
+    f.close();
+  }
+  Serial.printf("Library: %u songs edited\n", (unsigned)editedIds.size());
+  editedIds.clear();
+  buildViews();
+}
 
 uint16_t artistCount() { return nArtists; }
 const char *artistName(uint16_t i) { return i < nArtists ? artists[i] : ""; }

@@ -126,6 +126,21 @@ static void handleEvent(uint8_t e) {
       break;
     }
     case Thunder: startVoice(true, 180, 180, 1.8f, 0.6f); break;
+    case Hoot: // an owl: two soft falling "hoo"s
+      startVoice(false, 440, 400, 0.30f, 0.16f, 0, true);
+      startVoice(false, 410, 360, 0.45f, 0.16f, 380, true);
+      break;
+    case Tick: startVoice(false, 1700, 1500, 0.035f, 0.05f, 0, true); break;
+    case Honk: // a goose: two blaring nasal notes
+      startVoice(false, 330, 300, 0.16f, 0.22f);
+      startVoice(false, 360, 280, 0.22f, 0.22f, 190);
+      break;
+    case Hop: startVoice(false, 420, 900, 0.12f, 0.12f, 0, true); break;
+    case Gull: // a seagull's cry, falling
+      startVoice(false, 1500, 900, 0.18f, 0.12f);
+      startVoice(false, 1400, 800, 0.26f, 0.10f, 170);
+      break;
+    case Tock: startVoice(false, 900, 850, 0.05f, 0.09f, 0, true); break;
   }
 }
 

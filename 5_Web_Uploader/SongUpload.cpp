@@ -1,4 +1,5 @@
 #include "SongUpload.h"
+#include "Organizer.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WebServer.h>
@@ -45,7 +46,8 @@ li span:last-child{color:#a9a4cc;flex:none}
 h2{margin:0 0 10px;font-size:15px;text-transform:uppercase;letter-spacing:.08em;color:#a9a4cc}
 button{background:none;border:0;color:#ff7a8a;font:inherit;cursor:pointer;padding:0}
 </style></head><body><main>
-<section class="glass"><h1>Add songs</h1><p>Drop music here and it goes straight onto Jigglypuff.</p></section>
+<section class="glass"><h1>Add songs</h1><p>Drop music here and it goes straight onto Jigglypuff.</p>
+<p><a href="/organize" style="color:#ff8ab0">Organize songs &amp; playlists &rarr;</a></p></section>
 <label id="drop" class="glass" for="f"><b>Choose files or drop them here</b><span>MP3, WAV, M4A, AAC or FLAC</span></label>
 <input id="f" type="file" multiple accept=".mp3,.wav,.m4a,.aac,.flac,audio/*">
 <section class="glass" id="q" hidden><h2>Uploading</h2><ul id="ql"></ul></section>
@@ -207,6 +209,7 @@ bool start() {
     s_server->on("/songs", HTTP_GET, handleSongs);
     s_server->on("/delete", HTTP_POST, handleDelete);
     s_server->on("/upload", HTTP_POST, handleUploadDone, handleUploadData);
+    Organizer::attach(s_server); // /organize: fix song details, playlists
     s_server->onNotFound([]() { s_server->send(404, "text/plain", "Not found"); });
   }
   s_server->begin();

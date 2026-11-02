@@ -41,6 +41,18 @@ uint16_t count();
 const Track &track(uint16_t id);
 uint16_t findByPath(const char *path); // NONE if not in the library
 
+// Fixes a song's title / artist / album by hand (from the web organizer).
+// nullptr or "" leaves that field alone. Edits are kept in
+// /.jiggly/edits.txt and re-applied on every scan, so they survive a
+// rescan. Call commitEdits() once after a batch.
+bool setText(uint16_t id, const char *title, const char *artist, const char *album);
+void commitEdits();
+
+// Placeholders used when a song has no tag for these.
+extern const char *const UNKNOWN_ARTIST;
+extern const char *const UNKNOWN_ALBUM;
+extern const char *const UNTITLED;
+
 // Artists (by album artist), A-Z.
 uint16_t artistCount();
 const char *artistName(uint16_t i);

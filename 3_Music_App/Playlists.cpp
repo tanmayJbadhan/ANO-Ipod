@@ -122,27 +122,75 @@ bool contains(uint8_t i, uint16_t id) {
   return std::find(v.begin(), v.end(), id) != v.end();
 }
 
-int create() {
-  if (lists.size() >= MAX_LISTS) return -1;
-  for (int n = 1; n < 1000; n++) {
-    char nm[40];
-    snprintf(nm, sizeof(nm), "Playlist %d", n);
-    bool taken = false;
-    for (const List &l : lists) {
-      if (!strcasecmp(l.name, nm)) { taken = true; break; }
-    }
-    if (taken) continue;
-    List l;
-    strlcpy(l.name, nm, sizeof(l.name));
-    snprintf(l.file, sizeof(l.file), "%s/%s.m3u", DIR_PATH, nm);
-    if (!save(l)) return -1;
-    lists.push_back(l);
-    std::sort(lists.begin(), lists.end(), naturalLess);
-    for (size_t i = 0; i < lists.size(); i++) {
-      if (!strcmp(lists[i].name, nm)) return (int)i;
-    }
+static bool taken(const char *nm, int except = -1) {
+  for (size_t i = 0; i < lists.size(); i++) {
+    if ((int)i != except && !strcasecmp(lists[i].name, nm)) return true;
+  }
+  return false;
+}
+
+static int indexOf(const char *nm) {
+  for (size_t i = 0; i < lists.size(); i++) {
+    if (!strcmp(lists[i].name, nm)) return (int)i;
   }
   return -1;
+}
+
+// Screen name (ASCII) and file name (no characters FAT refuses) for a
+// name typed into the organizer. False if nothing usable is left.
+static bool makeNames(const char *typed, char *name, size_t nameLen, char *file, size_t fileLen) {
+  TagReader::foldUtf8(typed, name, nameLen);
+  char *p = name;
+  while (*p == ' ') p++;
+  memmove(name, p, strlen(p) + 1);
+  if (!name[0]) return false;
+  char base[40];
+  strlcpy(base, name, sizeof(base));
+  for (char *c = base; *c; c++) {
+    if (strchr("/\\:*?\"<>|", *c) || *c < 0x20) *c = '_';
+  }
+  snprintf(file, fileLen, "%s/%s.m3u", DIR_PATH, base);
+  return true;
+}
+
+int create(const char *typed) {
+  if (lists.size() >= MAX_LISTS) return -1;
+  List l;
+  if (typed) {
+    if (!makeNames(typed, l.name, sizeof(l.name), l.file, sizeof(l.file)) || taken(l.name)) return -1;
+  } else {
+    int n = 1;
+    char nm[40];
+    do snprintf(nm, sizeof(nm), "Playlist %d", n++);
+    while (taken(nm) && n < 1000);
+    makeNames(nm, l.name, sizeof(l.name), l.file, sizeof(l.file));
+  }
+  if (!save(l)) return -1;
+  lists.push_back(l);
+  std::sort(lists.begin(), lists.end(), naturalLess);
+  return indexOf(l.name);
+}
+
+bool rename(uint8_t i, const char *typed) {
+  if (i >= lists.size()) return false;
+  char nm[40], file[96];
+  if (!makeNames(typed, nm, sizeof(nm), file, sizeof(file)) || taken(nm, i)) return false;
+  List &l = lists[i];
+  if (strcmp(file, l.file) != 0) {
+    SD.remove(l.file);
+    strlcpy(l.file, file, sizeof(l.file));
+  }
+  strlcpy(l.name, nm, sizeof(l.name));
+  save(l);
+  std::sort(lists.begin(), lists.end(), naturalLess);
+  return true;
+}
+
+bool erase(uint8_t i) {
+  if (i >= lists.size()) return false;
+  SD.remove(lists[i].file);
+  lists.erase(lists.begin() + i);
+  return true;
 }
 
 bool add(uint8_t i, uint16_t id) {

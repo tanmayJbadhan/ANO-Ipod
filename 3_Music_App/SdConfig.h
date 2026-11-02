@@ -15,3 +15,7 @@
 #define SD_MISO_PIN 40 // board pad: D0 (SO)
 #define SD_MOSI_PIN 39 // board pad: CMD (SI)
 #define SD_CS_PIN 41   // board pad: D3 (CS)
+
+// SPI clock for the card. Lower it (e.g. 10000000) if songs ever skip or
+// the card errors - the wires to the breakout are short jumpers.
+#define SD_SPI_HZ 20000000

@@ -35,13 +35,16 @@ struct Blob {
   float strength;
 };
 
-// Deep night-sky base with three soft light sources, so there is colour
-// for the glass to pick up wherever a panel lands.
+// Jigglypuff's colours for every screen below Home: a deep rose base with
+// soft glows of her bubblegum pink and creamy white, and a hint of the teal
+// of her eyes - so there is colour for the glass to pick up wherever a
+// panel lands, while white text stays easy to read.
 static const Blob BLOBS[] = {
-    {70, 40, 260, 40, 90, 255, 0.85f},   // blue, top left
-    {420, 270, 280, 220, 40, 140, 0.80f}, // magenta, bottom right
-    {330, 10, 190, 0, 200, 190, 0.55f},   // teal, top right
-    {120, 290, 200, 255, 120, 40, 0.45f}, // amber, bottom left
+    {60, 30, 300, 255, 128, 182, 0.85f},   // bubblegum pink, top left
+    {430, 275, 270, 255, 236, 242, 0.50f}, // creamy white, bottom right
+    {350, 0, 170, 110, 205, 220, 0.35f},   // eye teal, top right
+    {200, 160, 260, 235, 110, 165, 0.35f}, // rose, middle
+    {110, 300, 220, 255, 170, 205, 0.55f}, // soft pink, bottom left
 };
 
 bool begin(LandscapeGFX *gfx, Arduino_Canvas *canvas) {
@@ -58,9 +61,9 @@ bool begin(LandscapeGFX *gfx, Arduino_Canvas *canvas) {
 
   const int16_t W = gfx->width(), H = gfx->height();
   for (int16_t y = 0; y < H; y++) {
-    // Vertical base gradient: near-black navy to deep violet.
+    // Vertical base gradient: deep rose to berry.
     float t = (float)y / (H - 1);
-    float r = 8 + 22 * t, g = 10 + 4 * t, b = 30 + 30 * t;
+    float r = 70 + 34 * t, g = 18 + 12 * t, b = 52 + 22 * t;
 
     for (int16_t x = 0; x < W; x++) {
       float cr = r, cg = g, cb = b;
