@@ -24,7 +24,9 @@ Photos of the finished console, and screenshots taken straight from its screen.
 
 | File | Shows |
 |---|---|
-| `screen-games-menu.png` | The Games menu: Lullaby Run, Cypress Night, Late for Tea and Emerald City. |
+| `screen-games-menu.png` | The Games menu, scrolled to the end: Late for Tea, Emerald City and Cat Nap. |
+| `screen-cat-nap-title.png` | *Cat Nap*: the title card, choosing a household. |
+| `screen-cat-nap.png` | *Cat Nap*: a cat woken, and all the others revealed asleep. |
 | `screen-emerald-city-title.png` | *Raise the Emerald City*: the title card with Denslow's Dorothy, Tin Woodman and Scarecrow. |
 | `screen-emerald-city-munchkin.png` | *Raise the Emerald City* 1: a blue Munchkin tower going up. |
 | `screen-emerald-city-forest.png` | *Raise the Emerald City* 3: tin floors, with the heart-vane roof on the hook. |

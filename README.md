@@ -1,7 +1,7 @@
 # Jigglypuff
 
 A handmade pocket music console, built as a gift. It plays your music library
-from a microSD card through a hi-fi DAC, has four games, and lets you add and
+from a microSD card through a hi-fi DAC, has five games, and lets you add and
 organise songs from a phone. It's all wrapped in a "liquid glass" theme in
 Jigglypuff pink, with Jigglypuff on the Home screen.
 
@@ -54,6 +54,8 @@ Built on a LilyGo **T-Display-S3-AMOLED-1.64** with an Adafruit ANO click wheel.
 - **Raise the Emerald City:** a tower-stacking game from *The Wonderful Wizard of
   Oz*. The Wizard's crane swings each floor; drop it square to bring more people
   home. Six lands, from Munchkin Country to the Emerald City itself.
+- **Cat Nap:** mini mines, with cats. Lift the cushions without waking the cats
+  asleep underneath; the numbers tell how many are nearby.
 
 **Add songs and organise them from a phone**
 - **Upload:** open **Add songs** on the console, then `jigglypuff.local` in a
@@ -113,7 +115,7 @@ Each game shows its own controls on its title screen; they're also listed in
 | [`1_Examples/`](1_Examples/) | LilyGo's original example sketches for the board. Not part of the console. |
 | [`2_Firmware/`](2_Firmware/) | The main program: screens, menus, buttons, touch, battery and charger, screen sleep, power off. Plus the board's schematic and datasheets. |
 | [`3_Music_App/`](3_Music_App/) | The music library, tag reader, playlists, the Music screens, the player and the PCM5122 DAC driver. Plus the auto-tagger tool. |
-| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea* and *Raise the Emerald City*, with their drawing, rules and synthesised sound. |
+| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea*, *Raise the Emerald City* and *Cat Nap*, with their drawing, rules and synthesised sound. |
 | [`5_Web_Uploader/`](5_Web_Uploader/) | The phone pages: song upload and the organizer. Also clock sync. |
 | [`6_Theme_Graphics/`](6_Theme_Graphics/) | The glass look, the Jigglypuff-pink theme, the landscape screen rotation and the Home artwork. |
 | [`07_Images/`](07_Images/) | Photos of the console and screenshots from it. |

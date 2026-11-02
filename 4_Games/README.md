@@ -6,6 +6,23 @@ shapes and every sound synthesised, so the games need no image or audio files
 shared by all of them: they draw at half resolution and it doubles the pixels on
 the way to the screen.
 
+## *Cat Nap*
+
+Mini mines, with cats. Cats are asleep under some of the cushions; lift all the
+others without waking any. A number tells how many cats sleep on the cushions
+around it. Mark a cat's cushion with a ball of yarn. The first cushion is never a
+cat, and an empty one opens its whole quiet patch. Three households: **Kitten**
+(14 cats), **Cat cafe** (22) and **Cat lady** (30), on a 16 x 9 board. Best
+times are remembered.
+
+| File | What it does |
+|---|---|
+| `CatNap.*` | The board, the cushions, the sleeping (and one very awake) cats, yarn marks, the timer and best times. |
+
+**How to play**: arrows move the paw, **Select** lifts the cushion, and turning the
+wheel puts yarn on or takes it off. Select on a number whose cats are all marked
+lifts the rest around it. **Hold Down** to pause. Tapping a cushion lifts it.
+
 ## *Raise the Emerald City*
 
 A tower-stacking game from *The Wonderful Wizard of Oz* (L. Frank Baum, 1900).
