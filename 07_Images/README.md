@@ -24,7 +24,12 @@ Photos of the finished console, and screenshots taken straight from its screen.
 
 | File | Shows |
 |---|---|
-| `screen-games-menu.png` | The Games menu, scrolled to the end: Late for Tea, Emerald City and Cat Nap. |
+| `screen-games-menu.png` | The Games menu, scrolled to the end: Emerald City, Cat Nap and Ariadne. |
+| `screen-ariadne-title.png` | *Ariadne's Thread*: the title, with the Cretan labyrinth of the Knossos coins. |
+| `screen-ariadne-loom.png` | *Ariadne's Thread*, Prologue: Ariadne at her loom. |
+| `screen-ariadne-maze.png` | *Ariadne's Thread*, Act I: Theseus in the torch-lit labyrinth, the thread behind him. |
+| `screen-ariadne-minotaur.png` | *Ariadne's Thread*, Act II: Theseus and the Minotaur, as a vase painting. |
+| `screen-ariadne-thread.png` | *Ariadne's Thread*, Act III: the ball of thread leading Theseus and the Athenians out. |
 | `screen-cat-nap-title.png` | *Cat Nap*: the title card, choosing a household. |
 | `screen-cat-nap.png` | *Cat Nap*: a cat woken, and all the others revealed asleep. |
 | `screen-emerald-city-title.png` | *Raise the Emerald City*: the title card with Denslow's Dorothy, Tin Woodman and Scarecrow. |

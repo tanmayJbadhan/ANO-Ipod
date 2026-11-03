@@ -59,6 +59,7 @@
 #include "LateForTea.h"
 #include "EmeraldCity.h"
 #include "CatNap.h"
+#include "Ariadne.h"
 #include "WifiConfig.h"
 
 Arduino_DataBus *bus = new Arduino_ESP32QSPI(
@@ -85,7 +86,7 @@ int gamesSel = 0;          // focused tile in Games
 bool gameFailed = false;   // the last game didn't have the memory to start
 
 // The game running inside the Games screen, if any.
-enum class Game : uint8_t { None, Run, Cypress, Tea, Oz, Cat };
+enum class Game : uint8_t { None, Run, Cypress, Tea, Oz, Cat, Thread };
 Game game = Game::None;
 bool musicActive = false;  // the user wants music playing (drives auto-advance)
 bool needsRedraw = true;
@@ -403,7 +404,7 @@ void drawNowPlaying() {
 // Games menu: one tile per game.
 // Games menu: a row of tiles, three on screen, scrolling to keep the
 // focused one in view.
-static const int GAMES = 5, GAMES_SHOWN = 3;
+static const int GAMES = 6, GAMES_SHOWN = 3;
 static const int16_t GTILE_Y = 54, GTILE_W = 132, GTILE_H = 188, GTILE_GAP = 10;
 int gamesFirst() { return constrain(gamesSel - 1, 0, GAMES - GAMES_SHOWN); }
 int16_t gameSlotX(int slot) { return (int16_t)((SCREEN_W - (GAMES_SHOWN * GTILE_W + (GAMES_SHOWN - 1) * GTILE_GAP)) / 2 + slot * (GTILE_W + GTILE_GAP)); }
@@ -456,6 +457,17 @@ void iconCat(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
   gfx->fillCircle(cx + 24, cy - 22, 5, c);                  // a ball of yarn
 }
 
+void iconLabyrinth(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  for (int r = 30; r >= 10; r -= 8) {                         // rings of the labyrinth
+    gfx->fillCircle(cx, cy, r, c);
+    gfx->fillCircle(cx, cy, r - 3, cut);
+  }
+  gfx->fillRect(cx - 3, cy + 6, 6, 26, cut);                   // the way in
+  gfx->fillCircle(cx, cy, 4, c);
+  gfx->fillCircle(cx + 26, cy + 24, 7, c);                     // the ball of thread
+  gfx->drawLine(cx + 26, cy + 24, cx, cy + 34, c);
+}
+
 void iconCypress(int16_t cx, int16_t cy, uint16_t c) {
   gfx->fillCircle(cx + 24, cy - 22, 7, c);              // the moon
   gfx->fillTriangle(cx - 6, cy + 18, cx + 6, cy + 18, cx, cy - 30, c); // cypress
@@ -467,9 +479,9 @@ void iconCypress(int16_t cx, int16_t cy, uint16_t c) {
 void drawGames() {
   Glass::background();
   drawStatusBar("< Home");
-  static const char *names[GAMES] = {"Lullaby Run", "Cypress Night", "Late for Tea", "Emerald City", "Cat Nap"};
-  static const char *subs[GAMES] = {"City night racer", "Owls in the garden", "Wonderland dash", "Build Oz", "Don't wake them"};
-  const uint16_t tints[GAMES] = {C_BLUE, C_GREEN, C_PINK, Glass::rgb(40, 190, 120), Glass::rgb(190, 110, 230)};
+  static const char *names[GAMES] = {"Lullaby Run", "Cypress Night", "Late for Tea", "Emerald City", "Cat Nap", "Ariadne"};
+  static const char *subs[GAMES] = {"City night racer", "Owls in the garden", "Wonderland dash", "Build Oz", "Don't wake them", "The labyrinth"};
+  const uint16_t tints[GAMES] = {C_BLUE, C_GREEN, C_PINK, Glass::rgb(40, 190, 120), Glass::rgb(190, 110, 230), Glass::rgb(220, 70, 50)};
   int first = gamesFirst();
   for (int slot = 0; slot < GAMES_SHOWN; slot++) {
     int i = first + slot;
@@ -483,7 +495,8 @@ void drawGames() {
     else if (i == 1) iconCypress(cx, y + 70, C_TEXT);
     else if (i == 2) iconTea(cx, y + 70, C_TEXT, cut);
     else if (i == 3) iconCrane(cx, y + 70, C_TEXT, cut);
-    else iconCat(cx, y + 70, C_TEXT, cut);
+    else if (i == 4) iconCat(cx, y + 70, C_TEXT, cut);
+    else iconLabyrinth(cx, y + 70, C_TEXT, cut);
     // Big type when the name fits the tile, else the small size.
     uint8_t size = gfx->textWidth(names[i], 2) <= w - 10 ? 2 : 1;
     textCenter(cx, y + h - (size == 2 ? 62 : 56), names[i], size, sel ? C_TEXT : C_DIM);
@@ -575,7 +588,7 @@ void render() {
 bool musicWantsPower() {
   return (musicActive && !MusicPlayer::isPaused()) || LullabyRun::wantsAudioPower() ||
          CypressNight::wantsAudioPower() || LateForTea::wantsAudioPower() || EmeraldCity::wantsAudioPower() ||
-         CatNap::wantsAudioPower();
+         CatNap::wantsAudioPower() || Ariadne::wantsAudioPower();
 }
 
 // --- whichever game is running ------------------------------------------------
@@ -584,7 +597,7 @@ bool gameActive() {
   if (screen != Screen::Games) return false;
   return (game == Game::Run && LullabyRun::active()) || (game == Game::Cypress && CypressNight::active()) ||
          (game == Game::Tea && LateForTea::active()) || (game == Game::Oz && EmeraldCity::active()) ||
-         (game == Game::Cat && CatNap::active());
+         (game == Game::Cat && CatNap::active()) || (game == Game::Thread && Ariadne::active());
 }
 
 void gameExit() {
@@ -593,6 +606,7 @@ void gameExit() {
   else if (game == Game::Tea) LateForTea::exit();
   else if (game == Game::Oz) EmeraldCity::exit();
   else if (game == Game::Cat) CatNap::exit();
+  else if (game == Game::Thread) Ariadne::exit();
   game = Game::None;
 }
 
@@ -602,6 +616,7 @@ void gameKey(const InputEvent &ev) {
   else if (game == Game::Tea) LateForTea::key(ev);
   else if (game == Game::Oz) EmeraldCity::key(ev);
   else if (game == Game::Cat) CatNap::key(ev);
+  else if (game == Game::Thread) Ariadne::key(ev);
 }
 
 void gameFrame(int32_t wheel) {
@@ -610,6 +625,7 @@ void gameFrame(int32_t wheel) {
   else if (game == Game::Tea) LateForTea::frame(input, touch, wheel);
   else if (game == Game::Oz) EmeraldCity::frame(input, touch, wheel);
   else if (game == Game::Cat) CatNap::frame(input, touch, wheel);
+  else if (game == Game::Thread) Ariadne::frame(input, touch, wheel);
 }
 
 void gamePause() {
@@ -618,12 +634,13 @@ void gamePause() {
   else if (game == Game::Tea) LateForTea::pause();
   else if (game == Game::Oz) EmeraldCity::pause();
   else if (game == Game::Cat) CatNap::pause();
+  else if (game == Game::Thread) Ariadne::pause();
 }
 
 bool gameWantsExit() {
   return (game == Game::Run && LullabyRun::wantsExit()) || (game == Game::Cypress && CypressNight::wantsExit()) ||
          (game == Game::Tea && LateForTea::wantsExit()) || (game == Game::Oz && EmeraldCity::wantsExit()) ||
-         (game == Game::Cat && CatNap::wantsExit());
+         (game == Game::Cat && CatNap::wantsExit()) || (game == Game::Thread && Ariadne::wantsExit());
 }
 
 // Triple-tapping UP turns the screen off - except mid-maze, where UP walks.
@@ -631,6 +648,7 @@ bool gameUpSleepAllowed() {
   if (game == Game::Cypress) return CypressNight::upSleepAllowed();
   if (game == Game::Tea) return LateForTea::upSleepAllowed();
   if (game == Game::Cat) return CatNap::upSleepAllowed();
+  if (game == Game::Thread) return Ariadne::upSleepAllowed();
   return true;
 }
 
@@ -716,10 +734,11 @@ void launchGame(int i) {
   bool ok = i == 0 ? LullabyRun::enter(gfx, canvas, panel)
           : i == 1 ? CypressNight::enter(gfx, panel)
           : i == 2 ? LateForTea::enter(gfx, panel)
-          : i == 3 ? EmeraldCity::enter(gfx, panel) : CatNap::enter(gfx, panel);
+          : i == 3 ? EmeraldCity::enter(gfx, panel)
+          : i == 4 ? CatNap::enter(gfx, panel) : Ariadne::enter(gfx, panel);
   gameFailed = !ok;
   if (ok) {
-    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : i == 2 ? Game::Tea : i == 3 ? Game::Oz : Game::Cat;
+    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : i == 2 ? Game::Tea : i == 3 ? Game::Oz : i == 4 ? Game::Cat : Game::Thread;
     Pcm5122::setMute(false); // a paused track leaves the DAC muted
     powerAudioNow();
   }
@@ -1302,6 +1321,7 @@ void serialCommands() {
     if (game == Game::Run && gameActive()) { fb = LullabyRun::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Oz && gameActive()) { fb = EmeraldCity::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Cat && gameActive()) { fb = CatNap::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Thread && gameActive()) { fb = Ariadne::frameBuffer(); w = 228; h = 140; }
     Serial.printf("\nSHOT %d %d %d\n", w, h, (int)gfx->flipped());
     Serial.write((const uint8_t *)fb, (size_t)w * h * 2);
     Serial.println();
@@ -1309,6 +1329,8 @@ void serialCommands() {
     LateForTea::benchUnlockAll();
   } else if (c == 'A' && game == Game::Oz) {
     EmeraldCity::benchUnlockAll();
+  } else if (c == 'A' && game == Game::Thread) {
+    Ariadne::benchUnlockAll();
   } else if (c == 'Z' && game == Game::Oz) {
     EmeraldCity::benchAutoplay();
   } else if (c == 'Z' && game == Game::Tea) {

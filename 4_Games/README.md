@@ -6,6 +6,54 @@ shapes and every sound synthesised, so the games need no image or audio files
 shared by all of them: they draw at half resolution and it doubles the pixels on
 the way to the screen.
 
+## *Ariadne's Thread*
+
+The myth of the Cretan labyrinth in ten levels, drawn like Greek black-figure
+pottery (clay orange, glossy black figures with incised details, Greek-key
+bands) and Knossos frescoes (red columns that taper downward, double axes,
+dolphins, lilies, horns of consecration). The labyrinth itself is black and red.
+
+| # | Level | What you do |
+|---|---|---|
+| Prologue | Ariadne's Loom | Press Select as the shuttle crosses the gold. Each true throw spins more thread for Act I. |
+| Act I, 1-4 | The Bull Gate, The Hall of Frescoes, Daedalus's Doors, The Breathing Dark | Theseus walks a torch-lit maze, unrolling the red thread behind him. Walk back along it to wind it in; if it runs out, wind back and try another way. Double axes mark the true path in the Hall; bronze doors swing open and shut; in the Breathing Dark the Minotaur follows your scent, and you see only his eyes. |
+| Act II | The Heart | A vase-painting arena. The Minotaur paws, then charges: leap over him, let him crash into the columns, and strike while he is dazed. The crashes shake stones loose. |
+| Act III, 1-4 | The Thread Home, The Flooded Cistern, Minos's Guards, The Last Gate | You are the ball of thread, rolling a path out while Theseus and the Athenians follow. The thread can never cross itself, so a wrong turn means winding back (Select). Spindles add thread; water costs double; lantern light pulls the thread back; the last hall falls on a timer. |
+| Finale | The Crown of Stars | Ariadne sails free and the last of her thread becomes Corona Borealis. |
+
+**The generator** (comments in `Ariadne.cpp` give the details):
+- **Mazes, Act I:** Wilson's algorithm (loop-erased random walks, so every
+  perfect maze is equally likely), then braiding where the probability of
+  opening a dead end follows a fractal noise field, `p = p0 (0.55 + 0.9
+  max(0, fbm))`. Five candidates are made and scored by
+  `F = 0.45 L/2N + 0.25 E/N + 0.20 H/2 + 0.10 (1 - |D - D*|/D*)`: solution
+  length L, the cells E an A* agent expands (the agent-effort difficulty
+  measure of Beukman, James & Cleghorn, arXiv:2201.10334), the entropy H of the
+  junction degrees and the dead-end ratio D. The best is kept.
+- **Yarn levels, Act III:** a Hamiltonian path through every cell, shuffled by
+  ~3000 backbite moves (Mansfield 1982; shown to connect all Hamiltonian paths
+  of a grid by Kazazi, arXiv:2601.06749), gives a long self-avoiding route from
+  the centre to the edge. Every other cell is joined to it by Wilson's walks as
+  dead-end branches.
+- **Decoration:** Poisson-disk dart throwing for frescoes, torches and
+  spindles; the double axes follow the BFS solution.
+- **Light:** `I(d) = (1 - (d/R)^2)^2` with a flicker, only where a Bresenham
+  ray reaches the tile; torches make a static light map.
+- **The Minotaur:** follows a diffusing scent,
+  `u' = u + D (sum of neighbours - n u) - lambda u`, with u = 1 at Theseus.
+- **The thread:** drawn as a Catmull-Rom curve through the tile centres.
+- **The title:** the classical seven-circuit Cretan labyrinth from the coins of
+  Knossos, drawn as its path (circuits 3 2 1 4 7 6 5, then the centre).
+
+| File | What it does |
+|---|---|
+| `Ariadne.*` | All ten levels, the generators, lighting, the Minotaur, the black-figure characters and the story cards. |
+
+**How to play**: arrows walk or steer (the wheel steers the yarn and walks
+Theseus in the arena). **Select** throws the shuttle, leaps or strikes, and
+winds the yarn back. **Hold Down** pauses in the mazes; **Down** pauses in the
+arena.
+
 ## *Cat Nap*
 
 Mini mines, with cats. Cats are asleep under some of the cushions; lift all the
