@@ -23,7 +23,8 @@
 // Minotaur follows a diffusing scent.
 //
 // Controls:  arrows / wheel  move or steer    SELECT  leap, strike, rewind the yarn
-//            hold DOWN  pause (DOWN in the arena)   title: LEFT / RIGHT level, UP back
+//            pause: SELECT in the mazes, DOWN in the arena, hold DOWN elsewhere
+//            title: LEFT / RIGHT level, UP back
 namespace Ariadne {
 
 bool enter(LandscapeGFX *gfx, Arduino_GFX *panel); // false if out of memory
@@ -37,5 +38,6 @@ bool wantsAudioPower();
 bool upSleepAllowed();         // UP moves mid-level
 const uint16_t *frameBuffer(); // 228 x 140 RGB565, for screenshots
 void benchUnlockAll();         // USB bench command only: every level playable (not saved)
+void benchPlayAll();           // USB bench command only: a bot plays every level, results on serial
 
 } // namespace Ariadne

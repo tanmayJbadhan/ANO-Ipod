@@ -24,7 +24,13 @@ Photos of the finished console, and screenshots taken straight from its screen.
 
 | File | Shows |
 |---|---|
-| `screen-games-menu.png` | The Games menu, scrolled to the end: Emerald City, Cat Nap and Ariadne. |
+| `screen-games-menu.png` | The Games menu, scrolled to the end: Cat Nap, Ariadne and Lamplighter. |
+| `screen-lamplighter-title.png` | *Lamplighter*: the title, the Moth orbiting a lit ringed world. |
+| `screen-lamplighter-amber.png` | *Lamplighter*: orbiting a rocky world in the Amber Shallows, its lamp sweeping. |
+| `screen-lamplighter-rings.png` | *Lamplighter*: catching a ringed giant in the Ring Gardens. |
+| `screen-lamplighter-comets.png` | *Lamplighter*: a comet crossing the Comet Nursery. |
+| `screen-lamplighter-rose.png` | *Lamplighter*: a sleeping star in the Rose Nebula. |
+| `screen-lamplighter-deep.png` | *Lamplighter*: a dark star and its accretion disc in the Deep. |
 | `screen-ariadne-title.png` | *Ariadne's Thread*: the title, with the Cretan labyrinth of the Knossos coins. |
 | `screen-ariadne-loom.png` | *Ariadne's Thread*, Prologue: Ariadne at her loom. |
 | `screen-ariadne-maze.png` | *Ariadne's Thread*, Act I: Theseus in the torch-lit labyrinth, the thread behind him. |

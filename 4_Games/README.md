@@ -1,12 +1,85 @@
 # 4 · Games
 
-Opening **Games** shows a tile per game. Every picture in play is drawn from
+Opening **Games** shows a tile per game, seven in all, three on screen at a time
+(scroll with the wheel or Left/Right). Every picture in play is drawn from
 shapes and every sound synthesised, so the games need no image or audio files
 (only the storybook cards use a few public-domain engravings). `HalfRes.*` is
 shared by all of them: they draw at half resolution and it doubles the pixels on
 the way to the screen.
 
+In every game, holding **Select** for about a second quits straight to Home,
+whatever the game is doing.
+
+## *Lamplighter*
+
+An endless gravity-hopping flight through space. The Hush, a tide of quiet
+dark, is putting the stars to sleep. Wren keeps the lamps of the sky, and her
+little ship, the Moth, has no fuel left: only the pull of worlds. Catch a
+world's gravity and swing around it, let go to fly off along the orbit, and
+every world she circles lights its lamp again (a lighthouse beam starts to
+sweep from it; a sleeping star blazes back to life).
+
+<p align="center">
+  <img src="../07_Images/screen-lamplighter-title.png" width="32%" alt="Lamplighter title">
+  <img src="../07_Images/screen-lamplighter-rings.png" width="32%" alt="Lamplighter: the Ring Gardens">
+  <img src="../07_Images/screen-lamplighter-rose.png" width="32%" alt="Lamplighter: the Rose Nebula">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-lamplighter-amber.png" width="32%" alt="Lamplighter: the Amber Shallows">
+  <img src="../07_Images/screen-lamplighter-comets.png" width="32%" alt="Lamplighter: the Comet Nursery">
+  <img src="../07_Images/screen-lamplighter-deep.png" width="32%" alt="Lamplighter: the Deep">
+</p>
+
+- **Gravity:** inside a world's field (the dashed ring) its pull bends the
+  path, `a = k v^2 r / d^2` toward the centre. It scales with the speed
+  squared, so a world bends the path into the same shapes however fast the
+  Moth goes. Only her direction changes; her speed is fixed and rises slowly
+  with distance.
+- **Orbit:** holding locks a circular orbit at the distance where she caught
+  it, turning at `v / r`, the way set by which side she came in on. Letting go
+  flies on along the tangent. The wheel moves the orbit in or out.
+- **Danger:** touching a world, a moon (some worlds have one circling inside
+  the field) or a rock ends the run; so does the Hush. It creeps at half her
+  speed when close and rushes in when left far behind, so lingering in an
+  orbit costs ground.
+- **Five regions**, each with its own nebula and kinds of world: the Amber
+  Shallows (rock and lava worlds), the Ring Gardens (ringed giants), the Comet
+  Nursery (comets streak across), the Rose Nebula (stars to wake) and the
+  Deep (dark stars with a much stronger pull). Then round again, faster.
+- **Score:** 25 a lamp, 5 a speck of stardust, plus the distance in
+  light-years. The best score is remembered.
+
+**The drawing:** each world is shaded per pixel: `z = sqrt(1 - d^2)` on the
+disc, Lambert light `max(0, n.L)` from the upper left, surface detail (gas
+bands, craters, ice caps, glowing lava cracks) read at a longitude
+`u = dx / (z + 0.35) + spin` so it turns, and a rim of atmosphere. The
+nebulae are two layers of fractal value noise, made seamless left to right
+by `T(x) = ((w - x) f(x) + x f(x - w)) / w`. Rings and accretion discs draw
+their far half before the world and the near half after it.
+
+| File | What it does |
+|---|---|
+| `Lamplighter.*` | The flight, gravity and orbits, the five regions, worlds, moons, rocks, comets, stardust, the Hush, and the title and story cards. |
+
+**How to play**: **hold any arrow** (or hold the screen) to catch the nearest
+world's pull and orbit it; let go to fly. The **wheel** steers a little, or
+moves the orbit in and out. **Select** pauses. The USB bench command `Z` (with
+the game open) starts an autopilot, and each further `Z` starts it in the next
+region.
+
 ## *Ariadne's Thread*
+
+<p align="center">
+  <img src="../07_Images/screen-ariadne-title.png" width="32%" alt="Ariadne's Thread title">
+  <img src="../07_Images/screen-ariadne-loom.png" width="32%" alt="Ariadne's loom">
+  <img src="../07_Images/screen-ariadne-maze.png" width="32%" alt="Act I: the labyrinth">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-ariadne-minotaur.png" width="45%" alt="Act II: the Minotaur">
+  <img src="../07_Images/screen-ariadne-thread.png" width="45%" alt="Act III: the ball of thread">
+</p>
 
 The myth of the Cretan labyrinth in ten levels, drawn like Greek black-figure
 pottery (clay orange, glossy black figures with incised details, Greek-key
@@ -34,7 +107,9 @@ dolphins, lilies, horns of consecration). The labyrinth itself is black and red.
   ~3000 backbite moves (Mansfield 1982; shown to connect all Hamiltonian paths
   of a grid by Kazazi, arXiv:2601.06749), gives a long self-avoiding route from
   the centre to the edge. Every other cell is joined to it by Wilson's walks as
-  dead-end branches.
+  dead-end branches. The thread given is the route's own cost (wet steps
+  count double) plus a margin, and guards only patrol halls the route crosses,
+  so there is always a moment to slip past.
 - **Decoration:** Poisson-disk dart throwing for frescoes, torches and
   spindles; the double axes follow the BFS solution.
 - **Light:** `I(d) = (1 - (d/R)^2)^2` with a flicker, only where a Bresenham
@@ -50,11 +125,21 @@ dolphins, lilies, horns of consecration). The labyrinth itself is black and red.
 | `Ariadne.*` | All ten levels, the generators, lighting, the Minotaur, the black-figure characters and the story cards. |
 
 **How to play**: arrows walk or steer (the wheel steers the yarn and walks
-Theseus in the arena). **Select** throws the shuttle, leaps or strikes, and
-winds the yarn back. **Hold Down** pauses in the mazes; **Down** pauses in the
-arena.
+Theseus in the arena; hold Down to walk down). **Select** throws the shuttle,
+leaps or strikes, winds the yarn back, and pauses in the mazes. Steering the
+ball back the way it came stops it, to wait for a guard to pass. **Down**
+pauses in the arena; **hold Down** pauses at the loom and in the yarn halls.
+
+**Every level is checked by self-play**: the USB bench command `Y` (with the game
+open) has a bot play each level 12 times on fresh labyrinths, with the least
+thread the loom can give, and prints wins, losses and times.
 
 ## *Cat Nap*
+
+<p align="center">
+  <img src="../07_Images/screen-cat-nap-title.png" width="45%" alt="Cat Nap title">
+  <img src="../07_Images/screen-cat-nap.png" width="45%" alt="Cat Nap: a cat woken">
+</p>
 
 Mini mines, with cats. Cats are asleep under some of the cushions; lift all the
 others without waking any. A number tells how many cats sleep on the cushions
@@ -72,6 +157,18 @@ wheel puts yarn on or takes it off. Select on a number whose cats are all marked
 lifts the rest around it. **Hold Down** to pause. Tapping a cushion lifts it.
 
 ## *Raise the Emerald City*
+
+<p align="center">
+  <img src="../07_Images/screen-emerald-city-title.png" width="32%" alt="Raise the Emerald City title">
+  <img src="../07_Images/screen-emerald-city-munchkin.png" width="32%" alt="Munchkin Country">
+  <img src="../07_Images/screen-emerald-city-forest.png" width="32%" alt="The Great Forest">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-emerald-city-winkie.png" width="32%" alt="The Winkie Country">
+  <img src="../07_Images/screen-emerald-city-perfect.png" width="32%" alt="A perfect streak and a Winged Monkey">
+  <img src="../07_Images/screen-emerald-city-spire.png" width="32%" alt="The great spire">
+</p>
 
 A tower-stacking game from *The Wonderful Wizard of Oz* (L. Frank Baum, 1900).
 The cyclone scattered the Emerald City, and the Wizard runs a brass crane to
@@ -115,6 +212,29 @@ screen, Left/Right chooses a land.
 
 ## *Late for Tea*
 
+<p align="center">
+  <img src="../07_Images/screen-late-for-tea-title.png" width="32%" alt="Late for Tea title">
+  <img src="../07_Images/screen-late-for-tea-roses.png" width="32%" alt="The Garden of Roses">
+  <img src="../07_Images/screen-late-for-tea-cricket.png" width="32%" alt="The Cricket Pitch">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-late-for-tea-forest.png" width="32%" alt="The Firefly Forest">
+  <img src="../07_Images/screen-late-for-tea-mushrooms.png" width="32%" alt="The Caterpillar's Mushrooms">
+  <img src="../07_Images/screen-late-for-tea-pool.png" width="32%" alt="The Pool of Tears">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-late-for-tea-cheshire.png" width="32%" alt="The Cheshire Woods">
+  <img src="../07_Images/screen-late-for-tea-kitchen.png" width="32%" alt="The Duchess's Kitchen">
+  <img src="../07_Images/screen-late-for-tea-chessboard.png" width="32%" alt="The Looking-Glass Board">
+</p>
+
+<p align="center">
+  <img src="../07_Images/screen-late-for-tea-quadrille.png" width="45%" alt="The Lobster Quadrille">
+  <img src="../07_Images/screen-late-for-tea-tea-party.png" width="45%" alt="The Mad Tea Party">
+</p>
+
 A 3D dash behind the White Rabbit, down winding paths through ten places from
 Wonderland, to reach the Mad Hatter and the March Hare's tea party before four
 o'clock:
@@ -154,6 +274,11 @@ On the title screen, Left/Right chooses a place.
 
 ## *Cypress Night*
 
+<p align="center">
+  <img src="../07_Images/screen-cypress-night-title.png" width="45%" alt="Cypress Night title">
+  <img src="../07_Images/screen-cypress-night.png" width="45%" alt="Cypress Night: the writer and the owls">
+</p>
+
 A maze chase in a Persian garden at night. A writer in round glasses gathers
 the pages of his manuscript from the paths between rows of cypress trees, around
 a central pool. Four owls hunt him from their roosts in the corners and wake one
@@ -174,6 +299,11 @@ paused, **Down** quits the run. Up only means "back" on the title screen, since
 it walks during play.
 
 ## *Lullaby Run*
+
+<p align="center">
+  <img src="../07_Images/screen-lullaby-run-title.png" width="45%" alt="Lullaby Run: the district picker">
+  <img src="../07_Images/screen-lullaby-run.png" width="45%" alt="Lullaby Run: Puddle Market in the rain">
+</p>
 
 A pseudo-3D arcade racer in 11 districts. Puff races rivals across the city to win
 the Golden Hubcap. Every picture is drawn from shapes and every sound is synthesised

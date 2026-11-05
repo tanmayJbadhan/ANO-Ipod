@@ -36,6 +36,16 @@ void Input::debugDrivePin(uint8_t pin, bool level) {
   _ss.digitalWrite(pin, level ? HIGH : LOW);
 }
 
+void Input::debugHoldSelect(bool down) {
+  if (!_found) return;
+  if (down) {
+    _ss.pinMode(ANO_PIN_SELECT, OUTPUT);
+    _ss.digitalWrite(ANO_PIN_SELECT, LOW);
+  } else {
+    _ss.pinMode(ANO_PIN_SELECT, INPUT_PULLUP);
+  }
+}
+
 void Input::push(Key key, bool pressed, bool repeat) {
   uint8_t next = (uint8_t)((_queueTail + 1) % QUEUE_SIZE);
   if (next == _queueHead) return; // queue full, drop oldest-pending event

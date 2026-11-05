@@ -41,6 +41,10 @@ public:
   // any) the board's green LED sits on.
   void debugDrivePin(uint8_t pin, bool level);
 
+  // Bench testing: hold SELECT down from software by pulling its pin low,
+  // as the button itself does, then let it go again.
+  void debugHoldSelect(bool down);
+
   // Edge-triggered: true exactly once per long-press of SELECT (used as the
   // universal "back to menu" gesture from any app).
   bool selectLongPress();

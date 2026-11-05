@@ -60,6 +60,9 @@ static Arduino_GFX *s_panel = nullptr;
 static uint16_t *s_frame = nullptr;
 static Preferences s_prefs;
 static Input *s_input = nullptr;
+static uint8_t s_botHeld = 0; // bench self-play: the keys the bot holds down
+static bool s_bench = false;  // bench self-play running: nothing is saved
+static bool held(Key k) { return (s_botHeld & (1 << (int)k)) || (s_input && s_input->held(k)); }
 
 static Mode s_mode = Mode::Title;
 static int s_lv = 0, s_pick = 0, s_unlocked = 0;
@@ -699,11 +702,11 @@ static void updateMaze(float dt) {
     s_walk += dt * 14;
     if (s_move >= 1) { s_move = 1; arrive(); }
   }
-  if (s_move >= 1 && s_input) {
-    if (s_input->held(Key::Up)) tryMove(0);
-    else if (s_input->held(Key::Right)) tryMove(1);
-    else if (s_input->held(Key::Down) && s_downT < 0.25f) tryMove(2);
-    else if (s_input->held(Key::Left)) tryMove(3);
+  if (s_move >= 1) {
+    if (held(Key::Up)) tryMove(0);
+    else if (held(Key::Right)) tryMove(1);
+    else if (held(Key::Down)) tryMove(2);
+    else if (held(Key::Left)) tryMove(3);
   }
   if (s_move >= 1 && s_px == s_gx && s_py == s_gy) {
     RunAudio::fx(RunAudio::DingTop);
@@ -1076,8 +1079,8 @@ static void bossAction() {
 static void updateBoss(float dt) {
   // Theseus.
   float mv = 0;
-  if (s_input && s_input->held(Key::Left)) mv -= 1;
-  if (s_input && s_input->held(Key::Right)) mv += 1;
+  if (held(Key::Left)) mv -= 1;
+  if (held(Key::Right)) mv += 1;
   if (mv) { s_hface = mv > 0 ? 1 : -1; s_hrun += dt * 12; }
   s_hx = clampf(s_hx + mv * 175 * dt, ARENA_L + 10, ARENA_R - 10);
   s_hvy += 1150 * dt;
@@ -1111,8 +1114,13 @@ static void updateBoss(float dt) {
       if (s_bt > 2.3f) { s_bull = Bull::Paw; s_bt = 0; }
       break;
     case Bull::Recover:
-      s_bx += (s_bx < (ARENA_L + ARENA_R) / 2 ? 1 : -1) * 90 * dt; // stagger back to the middle
-      if (s_bt > 0.7f) { s_bull = Bull::Paw; s_bt = 0; }
+      // He staggers right back to the middle of the arena (Theseus struck
+      // him at a wall), leaving room to see the next charge and leap it.
+      {
+        float mid = (ARENA_L + ARENA_R) / 2, step = 240 * dt;
+        s_bx = fabsf(mid - s_bx) <= step ? mid : s_bx + (mid > s_bx ? step : -step);
+      }
+      if (s_bt > 0.9f) { s_bull = Bull::Paw; s_bt = 0; }
       break;
     case Bull::Down:
       if (s_bt > 2.2f) { s_mode = Mode::Won; s_modeT = 0; }
@@ -1221,7 +1229,7 @@ static int s_ystart, s_yexit, s_yexitDir;
 static int16_t s_yarn[YW * YH];
 static int s_ylen = 0, s_ybudget = 0, s_ydir = 1, s_ywant = 1;
 static int s_yto = -1;
-static float s_ymove = 1, s_yroll = 0, s_ylimit = 0;
+static float s_ymove = 1, s_yroll = 0, s_ylimit = 0, s_yspotT = 0;
 static bool s_yrewind = false;
 struct Guard { bool on; int x0, x1, y; float x; int dir; };
 static Guard s_guards[2];
@@ -1318,20 +1326,42 @@ static void makeYarn(int which) {
     s_yspindle[y][x] = 1;
     placed++;
   }
+  // The route's cells, and what its thread costs (a wet step costs two).
+  static bool onRoute[YW * YH];
+  memset(onRoute, 0, sizeof(onRoute));
+  int routeCost = 0;
+  for (int j = si;; j += dir) {
+    onRoute[path[j]] = true;
+    if (j != si) routeCost += s_ywater[path[j] / YW][path[j] % YW] ? 2 : 1;
+    if (j == endI) break;
+  }
+  // Guards patrol corridors the route crosses - one or two of its cells -
+  // so there is always a moment to slip past. (A guard walking the route's
+  // own corridor could never be passed: the ball can't overtake him.)
   s_guards[0].on = s_guards[1].on = false;
   if (which == 2) {
     int g = 0;
-    for (int tries = 0; tries < 300 && g < 2; tries++) {
-      int y = irand(YH), x = irand(YW - 4);
-      int len = 0;
-      while (x + len + 1 < YW && (s_yopen[y][x + len] & 2)) len++;
-      if (len < 3 || abs(y - YH / 2) < 1) continue;
-      s_guards[g] = {true, x, x + len, y, (float)x, 1};
-      g++;
-    }
+    for (int pass = 0; pass < 2 && g < 2; pass++)
+      for (int tries = 0; tries < 400 && g < 2; tries++) {
+        int y = irand(YH), x = irand(YW - 3);
+        int len = 0;
+        while (x + len + 1 < YW && (s_yopen[y][x + len] & 2)) len++;
+        if (len < 3 || abs(y - YH / 2) < 1) continue;
+        if (g == 1 && s_guards[0].y == y) continue;
+        int cross = 0;
+        bool gateOrStart = false;
+        for (int k = x; k <= x + len; k++) {
+          cross += onRoute[y * YW + k];
+          gateOrStart |= y * YW + k == s_yexit || y * YW + k == s_ystart;
+        }
+        if (gateOrStart || cross > 2 || (pass == 0 && cross == 0)) continue; // 2nd pass: side halls do
+        s_guards[g] = {true, x, x + len, y, (float)x, 1};
+        g++;
+      }
   }
-  s_ybudget = solLen + 1 + (which == 1 ? solLen / 3 : 0) + 10 - which * 2;
+  s_ybudget = routeCost + 1 + 10 - which * 2;
   s_ylimit = which == 3 ? solLen * 0.45f + 18 : 0;
+  s_yspotT = 0;
   s_yarn[0] = s_ystart;
   s_ylen = 1;
   s_yused[s_ystart / YW][s_ystart % YW] = 1;
@@ -1383,7 +1413,9 @@ static void updateYarn(float dt) {
     }
     return;
   }
-  // Guards: their lanterns light the cell they stand on and the next.
+  // Guards: their lanterns light the cell they stand on and the next. After
+  // a pull the thread has a moment's grace, so it isn't pulled twice at once.
+  if (s_yspotT > 0) s_yspotT -= dt;
   for (Guard &g : s_guards) {
     if (!g.on) continue;
     g.x += g.dir * dt * 1.4f;
@@ -1391,11 +1423,12 @@ static void updateYarn(float dt) {
     if (g.x <= g.x0) { g.x = g.x0; g.dir = 1; }
     int gx = (int)roundf(g.x);
     head = s_yarn[s_ylen - 1];
-    if (head / YW == g.y && (head % YW == gx || head % YW == gx + g.dir) && s_ylen > 1) {
+    if (s_yspotT <= 0 && head / YW == g.y && (head % YW == gx || head % YW == gx + g.dir) && s_ylen > 1) {
       note("Spotted! The thread is pulled back");
       RunAudio::fx(RunAudio::Thunder);
       for (int i = 0; i < 4; i++) yPop();
       s_shake = 4;
+      s_yspotT = 1.5f;
     }
   }
   head = s_yarn[s_ylen - 1];
@@ -1409,10 +1442,18 @@ static void updateYarn(float dt) {
     s_mode = Mode::Won; s_modeT = 0;
     return;
   }
+  // Steering back the way it came stops the ball (to wait for a guard);
+  // any other way sets it rolling again.
   int d = -1;
   if (yCanGo(head, s_ywant)) d = s_ywant;
-  else if (yCanGo(head, s_ydir)) d = s_ydir;
-  if (d < 0) return; // stuck: steer elsewhere, or wind back
+  else if (s_ywant != ((s_ydir + 2) & 3) && yCanGo(head, s_ydir)) d = s_ydir;
+  if (d < 0) {
+    // Stopped. If only the thread is lacking, say so.
+    int x = head % YW, y = head / YW;
+    for (int k : {s_ywant, s_ydir})
+      if ((s_yopen[y][x] & BIT[k]) && !s_yused[y + DY[k]][x + DX[k]] && s_noteT <= 0) note("No thread left - SELECT winds back");
+    return;
+  }
   s_ydir = d;
   int x = head % YW, y = head / YW;
   s_yto = (y + DY[d]) * YW + x + DX[d];
@@ -1744,6 +1785,7 @@ static void beginLevel() {
 }
 
 static void levelDone() {
+  if (s_bench) return;
   uint32_t ms = (uint32_t)(s_clock * 1000);
   if (LV[s_lv].kind != K_END && LV[s_lv].kind != K_LOOM && (!s_best[s_lv] || ms < s_best[s_lv])) {
     s_best[s_lv] = ms;
@@ -1852,6 +1894,143 @@ static void render() {
 }
 
 // ---------------------------------------------------------------------------
+// Bench self-play: a bot plays each level many times on fresh labyrinths
+// (USB command only), to show every one can be finished.
+// ---------------------------------------------------------------------------
+
+// Act I: walk the shortest way to the stairs (doors count as open; it waits
+// at a shut one). It doesn't dodge the Minotaur.
+static void botMaze() {
+  if (s_move < 1) return;
+  static int16_t dist[MAXTH * MAXTW], q[MAXTH * MAXTW];
+  for (int i = 0; i < s_tw * s_th; i++) dist[i] = -1;
+  int h = 0, t = 0;
+  dist[s_gy * s_tw + s_gx] = 0;
+  q[t++] = s_gy * s_tw + s_gx;
+  while (h < t) {
+    int c = q[h++], x = c % s_tw, y = c / s_tw;
+    for (int d = 0; d < 4; d++) {
+      int nx = x + DX[d], ny = y + DY[d];
+      if (nx < 0 || ny < 0 || nx >= s_tw || ny >= s_th || s_tile[ny][nx] == T_WALL) continue;
+      int nc = ny * s_tw + nx;
+      if (dist[nc] >= 0) continue;
+      dist[nc] = dist[c] + 1;
+      q[t++] = nc;
+    }
+  }
+  int here = dist[s_py * s_tw + s_px];
+  for (int d = 0; d < 4; d++) {
+    int nx = s_px + DX[d], ny = s_py + DY[d];
+    if (nx < 0 || ny < 0 || nx >= s_tw || ny >= s_th) continue;
+    if (dist[ny * s_tw + nx] == here - 1) { if (passable(nx, ny)) tryMove(d); return; }
+  }
+}
+
+// Act II: dodge falling stones, leap the charge, strike while he's dazed.
+static void botBoss() {
+  s_botHeld = 0;
+  float d = s_bx - s_hx;
+  bool ground = s_hy >= GROUND - 0.5f;
+  for (const Stone &s : s_stones)
+    if (s.on && s.t < 0.8f && fabsf(s.x - s_hx) < 24) {
+      bool goLeft = s.x > s_hx ? s_hx > ARENA_L + 40 : s_hx > ARENA_R - 40;
+      s_botHeld = 1 << (int)(goLeft ? Key::Left : Key::Right);
+      return;
+    }
+  if (s_bull == Bull::Charge) {
+    bool toward = (s_bface > 0) == (d < 0);
+    if (toward && ground && fabsf(d) < 30 + s_bspeed * 0.2f) bossAction();
+  } else if (s_bull == Bull::Dazed && !s_bstruck) {
+    if (fabsf(d) < 50 && ground) bossAction();
+    else s_botHeld = 1 << (int)(d > 0 ? Key::Right : Key::Left);
+  } else if (s_bull == Bull::Paw && fabsf(d) < 110) { // too close to leap in time: back off
+    bool left = d > 0 ? s_hx > ARENA_L + 30 : s_hx > ARENA_R - 30;
+    s_botHeld = 1 << (int)(left ? Key::Left : Key::Right);
+  }
+}
+
+// Act III: roll along the one path to the gate; wind back if off it; stop
+// and wait while a lantern sweeps the next cells.
+static void botYarn() {
+  if (s_ymove < 1) return;
+  int head = s_yarn[s_ylen - 1];
+  if (head == s_yexit) { s_ywant = s_yexitDir; s_yrewind = false; return; }
+  static int8_t toward[YW * YH];
+  static int16_t q[YW * YH];
+  memset(toward, -1, sizeof(toward));
+  int h = 0, t = 0;
+  toward[s_yexit] = 4;
+  q[t++] = s_yexit;
+  while (h < t) {
+    int c = q[h++], x = c % YW, y = c / YW;
+    for (int d = 0; d < 4; d++) {
+      if (!(s_yopen[y][x] & BIT[d])) continue;
+      int nc = (y + DY[d]) * YW + x + DX[d];
+      if (toward[nc] >= 0) continue;
+      toward[nc] = (d + 2) & 3; // from nc, step this way to get nearer
+      q[t++] = nc;
+    }
+  }
+  int d = toward[head];
+  int nx = head % YW + DX[d], ny = head / YW + DY[d];
+  if (s_yused[ny][nx]) { s_yrewind = true; return; } // off the path: wind back
+  s_yrewind = false;
+  for (const Guard &g : s_guards) {
+    if (!g.on || g.y != ny || head / YW == g.y) continue;
+    float gap = nx - g.x; // wait while his lantern is on, or coming onto, the cell
+    if (fabsf(gap) < 1.5f || (gap * g.dir > 0 && fabsf(gap) < 2.5f)) { s_ywant = (s_ydir + 2) & 3; return; }
+  }
+  s_ywant = d;
+}
+
+void benchPlayAll() {
+  const int RUNS = 12;
+  float spin = s_spin;
+  s_spin = 0.85f; // the least thread the loom can give
+  s_bench = true;
+  Serial.println("Ariadne self-play: every level, fresh labyrinths, least thread");
+  for (int lv = 1; lv < LEVELS - 1; lv++) {
+    int won = 0, lost = 0, stuck = 0;
+    float tsum = 0, tmax = 0;
+    const char *why = "";
+    for (int r = 0; r < RUNS; r++) {
+      s_lv = lv;
+      beginLevel();
+      int step = 0;
+      while (s_mode == Mode::Play && step < 60 * 300) {
+        switch (LV[lv].kind) {
+          case K_MAZE: botMaze(); break;
+          case K_BOSS: botBoss(); break;
+          case K_YARN: botYarn(); break;
+          default: break;
+        }
+        update(1.0f / 60);
+        if (++step % 300 == 0) delay(1);
+      }
+      if (s_mode == Mode::Won) { won++; tsum += s_clock; tmax = fmaxf(tmax, s_clock); }
+      else if (s_mode == Mode::Lost) { lost++; why = s_lostWhy; }
+      else {
+        stuck++;
+        if (LV[lv].kind == K_YARN) {
+          int head = s_yarn[s_ylen - 1];
+          Serial.printf("    stuck: head %d,%d exit %d,%d len %d cost %d/%d rewind %d want %d dir %d", head % YW, head / YW,
+                        s_yexit % YW, s_yexit / YW, s_ylen, yarnCost(), s_ybudget, s_yrewind, s_ywant, s_ydir);
+          for (const Guard &g : s_guards) if (g.on) Serial.printf("  guard row %d x %d-%d", g.y, g.x0, g.x1);
+          Serial.println();
+        }
+      }
+    }
+    Serial.printf("  %-2d %-22s won %2d/%d  lost %d  stuck %d  avg %.1fs max %.1fs  %s\n", lv, LV[lv].name, won, RUNS,
+                  lost, stuck, won ? tsum / won : 0.0f, tmax, lost ? why : "");
+  }
+  s_botHeld = 0;
+  s_bench = false;
+  s_spin = spin;
+  s_pick = s_unlocked;
+  setMode(Mode::Title);
+}
+
+// ---------------------------------------------------------------------------
 // Public
 // ---------------------------------------------------------------------------
 
@@ -1937,6 +2116,7 @@ void key(const InputEvent &ev) {
     case Mode::Play:
       if (ev.key == Key::Down && !ev.repeat) s_downT = 0;
       if (kind == K_LOOM && ev.key == Key::Select && !ev.repeat) loomThrow();
+      else if (kind == K_MAZE && ev.key == Key::Select && !ev.repeat) pause();
       else if (kind == K_MAZE && !ev.repeat && s_move >= 1) {
         if (ev.key == Key::Up) tryMove(0);
         else if (ev.key == Key::Right) tryMove(1);
@@ -1983,8 +2163,9 @@ void frame(Input &input, TouchInput &touch, int32_t wheel) {
 
   if (s_mode == Mode::Play) {
     Kind kind = LV[s_lv].kind;
-    // Holding DOWN pauses in the mazes (a tap still moves or steers).
-    if (kind != K_BOSS && s_downT >= 0 && input.held(Key::Down)) {
+    // Holding DOWN pauses at the loom and in the yarn halls (a tap still
+    // steers). In the mazes DOWN walks, and SELECT pauses instead.
+    if ((kind == K_LOOM || kind == K_YARN) && s_downT >= 0 && input.held(Key::Down)) {
       s_downT += dt;
       if (s_downT >= 0.8f) { s_downT = -1; setMode(Mode::Paused); }
     }
