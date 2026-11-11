@@ -28,9 +28,6 @@ void key(const InputEvent &ev);
 void pause();
 bool wantsExit();
 bool wantsAudioPower();
-// UP is a direction while walking, so triple-tapping it must not put the
-// screen to sleep then - only on the title / pause / game-over screens.
-bool upSleepAllowed();
 // The last frame drawn (228 x 140 RGB565, landscape), for screenshots.
 const uint16_t *frameBuffer();
 

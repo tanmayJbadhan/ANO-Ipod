@@ -4,7 +4,7 @@ The console's main program and the parts every feature depends on.
 
 | File | What it does |
 |---|---|
-| `Jigglypuff.ino` | Start-up, the Home / Music / Games / Add songs screens, navigation, volume and brightness, screen sleep (triple-tap Up), power off (hold Select; in a game, holding Select quits to Home), and powering the DAC only while sound plays. |
+| `Jigglypuff.ino` | Start-up, the Home / Music / Games / Add songs screens, navigation, volume and brightness, screen sleep (hold Down; turn the wheel to wake), power off (hold Select; in a game, holding Select quits to Home), and powering the DAC only while sound plays. |
 | `Input.*` | The ANO wheel and its 5 buttons over I²C: debouncing, press/release events, wheel turns. The buttons are remapped because the wheel is mounted rotated 90°. |
 | `TouchInput.*` | The FT3168 touch screen. |
 | `BatteryMonitor.*` | The SY6970 charger: battery level, charging, and the 5 V boost that powers the DAC on battery. Includes the checks that stop the boost blocking charging when USB is plugged in. |

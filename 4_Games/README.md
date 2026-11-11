@@ -1,6 +1,6 @@
 # 4 · Games
 
-Opening **Games** shows a tile per game, seven in all, three on screen at a time
+Opening **Games** shows a tile per game, eight in all, three on screen at a time
 (scroll with the wheel or Left/Right). Every picture in play is drawn from
 shapes and every sound synthesised, so the games need no image or audio files
 (only the storybook cards use a few public-domain engravings). `HalfRes.*` is
@@ -9,6 +9,93 @@ the way to the screen.
 
 In every game, holding **Select** for about a second quits straight to Home,
 whatever the game is doing.
+
+## *White Heron*
+
+A 3D flight over four lands. Each year people light paper lanterns and let them
+go, each one a wish; the white heron gathers them on her way home. Fly her
+through the rings of wind that keep her aloft, collect the lanterns, and never
+touch water or land.
+
+<p align="center">
+  <img src="../07_Images/screen-white-heron-maple-hollow.png" width="45%" alt="White Heron: Maple Hollow">
+  <img src="../07_Images/screen-white-heron-river-citadel.png" width="45%" alt="White Heron: River Citadel">
+</p>
+<p align="center">
+  <img src="../07_Images/screen-white-heron-snow-lake.png" width="45%" alt="White Heron: Snow Lake">
+  <img src="../07_Images/screen-white-heron-white-cliffs.png" width="45%" alt="White Heron: White Cliffs">
+</p>
+
+**Four worlds**, each a procedural seed with its own land, plants, buildings,
+light and air. Pick one with Left/Right on the title screen; each is made fresh
+when you fly it (about 11-13 s on the console).
+
+| World | What's there |
+|---|---|
+| **Maple Hollow** | Rolling hills of orange, red and gold tree crowns, ponds, a winding dirt path, soft hazy light. |
+| **River Citadel** | A river winding through green meadows, a town of pale houses with a few green domes along its banks, a white fortress on the highest hill, cumulus in a blue sky. |
+| **Snow Lake** | A large still lake that mirrors the peaks, snow lying where the slopes let it, dark snow-dusted conifers, poplar rows on the shore, low mist, painted boats. |
+| **White Cliffs** | Stepped limestone islands with layered cliff faces, beaches, turquoise shallows over sand fading to deep blue, white sails. |
+
+<p align="center">
+  <img src="../07_Images/white-heron-worlds.png" width="90%" alt="The four worlds from above">
+</p>
+
+**The heron** is a jointed mesh: each wing has a shoulder, elbow and wrist, pale
+coverts at the front and grey secondaries behind, a white wrist patch and five
+dark primaries fanned like fingers. The neck folds back in an S, with a black
+crown stripe and an orange bill, and the legs trail behind. Slow, deep
+wingbeats bend each wing at the elbow and wrist and fold it a little on the
+upstroke; she beats faster as she climbs.
+
+**Making a world** (in `Crane.cpp`; about 2 MB of PSRAM while it runs):
+- **Land:** an island mask from fractal noise, rolling hills plus ridged
+  multifractal mountains, blurred so the slopes are smooth, then remapped so a
+  set share of the map lies under water. White Cliffs is terraced into plateaus,
+  `h' = (floor t + smoothstep(0.7, 1, frac t)) * step`. River Citadel carves a
+  river where `|fbm - 0.5|` is small; Maple Hollow lays a path the same way.
+- **Things on it:** trees are stamped into the heightmap as domes (or cones for
+  conifers and poplars) on a jittered grid, so they have real crowns that catch
+  the light and cast shadows. Houses and the fortress are blocks with pale walls
+  round the edge and dark roofs inside.
+- **Light:** a sweep along each row toward the sun keeps a horizon height,
+  `hs = max(hs - tan(elevation), h)`, and anything below it is in shadow. Then
+  Lambert shading from the slopes, ambient occlusion from a 13 x 13 local mean,
+  sunlight tinted the sun's colour and shadow tinted the world's shade colour,
+  rock on steep ground and snow only where the slope lets it lie.
+- **Distance:** two averaged copies of the map (256 and 128 square) for the far
+  ground, so it doesn't alias into stripes.
+
+**Drawing a frame:**
+- **Terrain:** a heightmap ray-caster. All screen columns step out together,
+  depth by depth, so neighbouring columns read neighbouring texels. Each sample
+  blends the four texels around it in fixed point, height and colour at once,
+  and shades its span down to the nearer sample, so cliffs read as surfaces.
+  Both cores share the work: the second core draws the left half of the screen
+  while the first draws the right.
+- **Air:** haze `F = 1 - exp(-k z / zfar)` toward the world's haze colour, and
+  mist that lies low over the water, `m = mist * exp(-(h - sea) / 16)`.
+- **Water:** ripples from a tiling noise table, sun glints, and screen-space
+  reflections that mirror the shore, the mountains and the sky, wavering with
+  the ripples and stronger toward the distance.
+- **Sky:** a gradient, the sun, and a band of clouds painted from noise, lit on
+  top and shaded underneath.
+- **In the air:** the wind rings, lanterns and boats are hidden where nearer
+  land covers them, using a depth buffer the terrain fills.
+
+It runs at about 14-15 fps on the console.
+
+| File | What it does |
+|---|---|
+| `Crane.*` | *White Heron*: the four worlds and their generator, the ray-caster and its two-core split, sky, haze, mist and reflections, wind rings, lanterns, boats, the heron, flight, and the title and story cards. |
+
+**How to play**: **Left/Right** (or the wheel) turn, and the heron banks into
+the turn. **Up** climbs, **Down** dives. Each ring she flies through gives back
+wind (the bar at top right) and a little speed; lanterns give a little wind
+too. With no wind left she can only glide down. **Select** pauses. On the title
+screen, Left/Right chooses the world. Each world remembers its best number of
+wishes. The USB bench command `Z` (with the game open) starts an autopilot, and
+each further `Z` makes and flies the next world.
 
 ## *Lamplighter*
 

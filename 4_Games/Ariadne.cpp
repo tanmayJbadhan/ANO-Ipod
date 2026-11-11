@@ -2080,7 +2080,6 @@ void exit() {
 bool active() { return s_active; }
 bool wantsExit() { return s_exit; }
 bool wantsAudioPower() { return s_active && RunAudio::running(); }
-bool upSleepAllowed() { return s_mode != Mode::Play; }
 const uint16_t *frameBuffer() { return s_frame; }
 void benchUnlockAll() { s_unlocked = LEVELS - 1; }
 

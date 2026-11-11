@@ -783,10 +783,6 @@ const uint16_t *frameBuffer() { return s_frame; }
 bool wantsExit() { return s_exit; }
 bool wantsAudioPower() { return s_active && RunAudio::running(); }
 
-bool upSleepAllowed() {
-  return s_mode == Mode::Title || s_mode == Mode::Paused || s_mode == Mode::Over;
-}
-
 void pause() {
   if (s_mode == Mode::Play || s_mode == Mode::Ready) {
     s_pausedFrom = s_mode;

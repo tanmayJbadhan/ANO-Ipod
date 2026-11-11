@@ -2008,8 +2008,7 @@ void key(const InputEvent &ev) {
       }
       break;
     case Mode::Paused:
-      // UP doesn't quit here: triple-tapping UP turns the screen off, and
-      // that shouldn't throw the race away on its second tap.
+      // UP doesn't quit here, so a stray tap doesn't throw the race away.
       if (ev.key == Key::Select) s_mode = Mode::Race;
       else if (ev.key == Key::Down) toPicker();
       break;

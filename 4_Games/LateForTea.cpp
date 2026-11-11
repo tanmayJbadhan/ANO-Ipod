@@ -1292,8 +1292,6 @@ bool wantsAudioPower() { return s_active && RunAudio::running(); }
 const uint16_t *frameBuffer() { return s_frame; }
 void benchUnlockAll() { s_unlocked = CHAPTERS - 1; }
 void benchLineup() { s_lineup = !s_lineup; }
-bool upSleepAllowed() { return s_mode != Mode::Race && s_mode != Mode::Ready; }
-
 void pause() {
   if (s_mode == Mode::Race || s_mode == Mode::Ready) setMode(Mode::Paused);
 }

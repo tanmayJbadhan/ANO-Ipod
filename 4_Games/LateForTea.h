@@ -33,7 +33,6 @@ void key(const InputEvent &ev);
 void pause();
 bool wantsExit();
 bool wantsAudioPower();
-bool upSleepAllowed();         // UP is the sprint mid-race
 const uint16_t *frameBuffer(); // 228 x 140 RGB565, for screenshots
 void benchUnlockAll();         // USB bench command only: every place playable (not saved)
 void benchLineup();            // USB bench command only: toggle a close-up of the cast

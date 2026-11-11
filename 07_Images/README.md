@@ -1,6 +1,8 @@
 # 7 · Images
 
 Photos of the finished console, and screenshots taken straight from its screen.
+The *White Heron* images are the exception: they were rendered on a PC by the
+game's own code (the same pixels the console draws).
 
 **Photos**
 
@@ -25,6 +27,11 @@ Photos of the finished console, and screenshots taken straight from its screen.
 | File | Shows |
 |---|---|
 | `screen-games-menu.png` | The Games menu, scrolled to the end: Cat Nap, Ariadne and Lamplighter. |
+| `screen-white-heron-maple-hollow.png` | *White Heron*: over the autumn hills of Maple Hollow. |
+| `screen-white-heron-river-citadel.png` | *White Heron*: the river valley and town of River Citadel. |
+| `screen-white-heron-snow-lake.png` | *White Heron*: through a ring of wind over Snow Lake, in the mist. |
+| `screen-white-heron-white-cliffs.png` | *White Heron*: the limestone islands and turquoise shallows of White Cliffs. |
+| `white-heron-worlds.png` | *White Heron*: the four generated worlds seen from above. |
 | `screen-lamplighter-title.png` | *Lamplighter*: the title, the Moth orbiting a lit ringed world. |
 | `screen-lamplighter-amber.png` | *Lamplighter*: orbiting a rocky world in the Amber Shallows, its lamp sweeping. |
 | `screen-lamplighter-rings.png` | *Lamplighter*: catching a ringed giant in the Ring Gardens. |

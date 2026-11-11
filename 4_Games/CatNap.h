@@ -26,7 +26,6 @@ void key(const InputEvent &ev);
 void pause();
 bool wantsExit();
 bool wantsAudioPower();
-bool upSleepAllowed();         // UP moves the paw mid-game
 const uint16_t *frameBuffer(); // 228 x 140 RGB565, for screenshots
 
 } // namespace CatNap

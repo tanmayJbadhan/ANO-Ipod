@@ -49,6 +49,10 @@ uint16_t nArtists = 0;
 struct AlbumKey { const char *album; const char *artist; uint16_t count; };
 AlbumKey *albums = nullptr;
 uint16_t nAlbums = 0;
+// Who each song's album is filed under in the Albums list: its album
+// artist, or VARIOUS for "Singles" and for compilations (see buildViews).
+const char **albumOwner = nullptr;
+const char *const VARIOUS = "Various Artists";
 
 bool isReady = false;
 bool isDirty = true;
@@ -407,6 +411,13 @@ int cmpAlbumKey(const void *a, const void *b) {
   return c ? c : strcasecmp(x->artist, y->artist);
 }
 
+// The Singles album runs across every artist: A-Z by artist, then title.
+int cmpTrackInSingles(const void *a, const void *b) {
+  const Track &x = tracks[*(const uint16_t *)a], &y = tracks[*(const uint16_t *)b];
+  int c = strcasecmp(x.albumArtist, y.albumArtist);
+  return c ? c : strcasecmp(x.title, y.title);
+}
+
 int cmpTrackInAlbum(const void *a, const void *b) {
   const Track &x = tracks[*(const uint16_t *)a], &y = tracks[*(const uint16_t *)b];
   if (x.album != y.album) return strcasecmp(x.album, y.album);
@@ -434,19 +445,42 @@ void buildViews() {
     free(tmp);
   }
 
-  // Albums: (album, album artist) pairs
+  // Albums: (album, album artist) pairs - then a second pass that files
+  // "Singles" and compilations under one owner, so each is a single album
+  // rather than one per artist. A compilation is an album name shared by
+  // three or more artists with at most two songs each (a soundtrack, a
+  // various-artists collection); a common name like "Greatest Hits" held
+  // by bands with whole albums of it is left alone.
   AlbumKey *keys = (AlbumKey *)ps_malloc(sizeof(AlbumKey) * (trackCount + 1));
   nAlbums = 0;
   if (keys) {
-    for (uint16_t i = 0; i < trackCount; i++) keys[i] = {tracks[i].album, tracks[i].albumArtist, 1};
-    qsort(keys, trackCount, sizeof(AlbumKey), cmpAlbumKey);
-    for (uint16_t i = 0; i < trackCount; i++) {
-      if (nAlbums && albums[nAlbums - 1].album == keys[i].album && albums[nAlbums - 1].artist == keys[i].artist) {
-        albums[nAlbums - 1].count++;
-      } else {
-        albums[nAlbums++] = keys[i];
+    auto collapse = [&]() {
+      qsort(keys, trackCount, sizeof(AlbumKey), cmpAlbumKey);
+      nAlbums = 0;
+      for (uint16_t i = 0; i < trackCount; i++) {
+        if (nAlbums && albums[nAlbums - 1].album == keys[i].album && albums[nAlbums - 1].artist == keys[i].artist) {
+          albums[nAlbums - 1].count++;
+        } else {
+          albums[nAlbums++] = keys[i];
+        }
       }
+    };
+    for (uint16_t i = 0; i < trackCount; i++) keys[i] = {tracks[i].album, tracks[i].albumArtist, 1};
+    collapse();
+    for (uint16_t i = 0; i < trackCount; i++) albumOwner[i] = tracks[i].albumArtist;
+    for (uint16_t a = 0; a < nAlbums;) {
+      uint16_t b = a, most = 0;
+      while (b < nAlbums && albums[b].album == albums[a].album) { most = max(most, albums[b].count); b++; }
+      const char *name = albums[a].album;
+      bool singles = !strcasecmp(name, "Singles");
+      bool compilation = b - a >= 3 && most <= 2 && name != UNKNOWN_ALBUM;
+      if (singles || compilation)
+        for (uint16_t i = 0; i < trackCount; i++)
+          if (tracks[i].album == name) albumOwner[i] = VARIOUS;
+      a = b;
     }
+    for (uint16_t i = 0; i < trackCount; i++) keys[i] = {tracks[i].album, albumOwner[i], 1};
+    collapse();
     free(keys);
   }
 }
@@ -460,7 +494,8 @@ bool allocate() {
   artists = (const char **)ps_malloc(sizeof(char *) * Library::MAX_TRACKS);
   artistCounts = (uint16_t *)ps_malloc(sizeof(uint16_t) * Library::MAX_TRACKS);
   albums = (AlbumKey *)ps_malloc(sizeof(AlbumKey) * Library::MAX_TRACKS);
-  if (!pool || !tracks || !pathTable || !internTable || !artists || !artistCounts || !albums) {
+  albumOwner = (const char **)ps_malloc(sizeof(char *) * Library::MAX_TRACKS);
+  if (!pool || !tracks || !pathTable || !internTable || !artists || !artistCounts || !albums || !albumOwner) {
     Serial.println("Library: out of PSRAM");
     pool = nullptr;
     return false;
@@ -582,9 +617,10 @@ uint16_t songsOnAlbum(uint16_t a, uint16_t *out, uint16_t max) {
   if (a >= nAlbums) return 0;
   uint16_t n = 0;
   for (uint16_t i = 0; i < trackCount && n < max; i++) {
-    if (tracks[i].album == albums[a].album && tracks[i].albumArtist == albums[a].artist) out[n++] = i;
+    if (tracks[i].album == albums[a].album && albumOwner[i] == albums[a].artist) out[n++] = i;
   }
-  qsort(out, n, sizeof(uint16_t), cmpTrackInAlbum);
+  bool singles = !strcasecmp(albums[a].album, "Singles");
+  qsort(out, n, sizeof(uint16_t), singles ? cmpTrackInSingles : cmpTrackInAlbum);
   return n;
 }
 

@@ -35,7 +35,6 @@ void key(const InputEvent &ev);
 void pause();
 bool wantsExit();
 bool wantsAudioPower();
-bool upSleepAllowed();         // UP moves mid-level
 const uint16_t *frameBuffer(); // 228 x 140 RGB565, for screenshots
 void benchUnlockAll();         // USB bench command only: every level playable (not saved)
 void benchPlayAll();           // USB bench command only: a bot plays every level, results on serial

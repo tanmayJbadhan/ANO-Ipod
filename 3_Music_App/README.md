@@ -4,7 +4,7 @@ Plays the songs on the microSD card through the PCM5122 DAC.
 
 | File | What it does |
 |---|---|
-| `Library.*` | Finds every song on the card (all folders, up to 2000) and sorts them into Artists and Albums. |
+| `Library.*` | Finds every song on the card (all folders, up to 2000) and sorts them into Artists and Albums. Songs whose album is "Singles" make one album across all artists (listed A-Z by artist), and an album name shared by three or more artists with a song or two each (a soundtrack, a compilation) is one album under "Various Artists"; each artist's own page still lists their songs. |
 | `TagReader.*` | Reads title / artist / album / track number from inside each file (MP3 and AAC ID3 tags, M4A, FLAC). Songs without tags are named from the file and folder: `Artist/Album/01 - Title.mp3` or `Artist - Title.mp3`. |
 | `Playlists.*` | Playlists, saved on the card as `/Playlists/Playlist 1.m3u` etc. A computer's music player can open them too. |
 | `MusicBrowser.*` | The Music screens: the Artists / Albums / Playlists menu, the lists, and the "Add to playlist" picker. |

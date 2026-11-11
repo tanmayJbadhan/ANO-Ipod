@@ -117,9 +117,11 @@ void rowText(Kind k, int i, char *left, size_t ll, char *right, size_t rl, bool 
     case Kind::Songs: {
       const Track &t = Library::track(songIds[i]);
       strlcpy(left, t.title, ll);
-      // Inside an artist the album is useful; inside a playlist, the artist.
+      // Inside an artist the album is useful; inside a playlist, or an album
+      // of many artists (Singles, a soundtrack), the artist.
       if (songSource == SongSource::Artist) strlcpy(right, t.album, rl);
       else if (songSource == SongSource::Playlist) strlcpy(right, t.artist, rl);
+      else if (strcmp(Library::albumArtistName(songCtx), t.albumArtist)) strlcpy(right, t.artist, rl);
       playing = MusicPlayer::queueLength() && songIds[i] == MusicPlayer::currentTrack();
       break;
     }
@@ -307,12 +309,6 @@ void reset() {
 uint16_t playIndex() { return chosen; }
 
 bool atTop() { return cur().kind == Kind::Root; }
-
-uint8_t level() { return depth; }
-
-void returnTo(uint8_t lvl) {
-  if (lvl > depth && lvl < 4) depth = lvl;
-}
 
 void draw() {
   Level &l = cur();

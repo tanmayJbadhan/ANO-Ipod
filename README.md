@@ -4,13 +4,13 @@
 
 **A handmade pocket music console, built as a gift.**
 
-Your music library on a hi-fi DAC, seven original games, and songs added from your
+Your music library on a hi-fi DAC, eight original games, and songs added from your
 phone, all in a "liquid glass" theme in Jigglypuff pink.
 
 ![ESP32-S3](https://img.shields.io/badge/ESP32--S3-16MB_%7C_8MB_PSRAM-e75480?style=flat-square)
 ![PlatformIO](https://img.shields.io/badge/built_with-PlatformIO-f5822a?style=flat-square)
 ![AMOLED](https://img.shields.io/badge/AMOLED-456%C3%97280-9b59b6?style=flat-square)
-![Games](https://img.shields.io/badge/games-7-5a8cff?style=flat-square)
+![Games](https://img.shields.io/badge/games-8-5a8cff?style=flat-square)
 
 <img src="07_Images/home-screen.png" width="46%" alt="The console on its Home screen">&nbsp;&nbsp;<img src="07_Images/music-player.png" width="43%" alt="The console playing music">
 
@@ -34,9 +34,8 @@ phone, all in a "liquid glass" theme in Jigglypuff pink.
 - **Menu:** four tiles, **Now playing / Artists / Albums / Playlists**. Any song
   can be added to a playlist.
 - **Player:** tap Left/Right to skip songs, or hold them to scrub through a song.
-  The wheel sets the volume, even with the screen locked.
-- **Lock and pick up again:** triple-tap Up to turn the screen off. It wakes on
-  the same song or list you left.
+  The wheel sets the volume.
+- **Lock and pick up again:** hold Down to turn the screen off; turn the wheel about 45° to wake it on the same song or list you left.
 
 ## Games
 
@@ -58,7 +57,7 @@ to go back to Home.
 <tr>
 <td align="center"><img src="07_Images/screen-lullaby-run.png" alt="Lullaby Run"><br><b>Lullaby Run</b><br><sub>A night-time city racer across 11 districts, with a live engine sound.</sub></td>
 <td align="center"><img src="07_Images/screen-games-menu.png" alt="Games menu"><br><b>The Games menu</b><br><sub>Three tiles on screen at a time; scroll with the wheel.</sub></td>
-<td align="center"><img src="07_Images/screen-lamplighter-rose.png" alt="Lamplighter: the Rose Nebula"><br><b>Five regions of sky</b><br><sub>Lamplighter's Rose Nebula, with a sleeping star to wake.</sub></td>
+<td align="center"><img src="07_Images/screen-white-heron-snow-lake.png" alt="White Heron"><br><b>White Heron</b><br><sub>A 3D flight over four lands, gathering wish lanterns through rings of wind.</sub></td>
 </tr>
 </table>
 
@@ -106,9 +105,9 @@ get it.
 
 | Anywhere | |
 |---|---|
-| **Brightness** | hold **Down** and turn the wheel (remembered) |
-| **Lock the screen** | triple-tap **Up**: music keeps playing and the wheel still sets the volume (two clicks a step) |
-| **Wake it** | double-tap any arrow; it wakes right where you left it |
+| **Brightness** | hold **Down** and turn the wheel (remembered; this never locks the screen) |
+| **Lock the screen** | hold **Down** about 1 s and let go (any screen outside a game): music keeps playing, buttons and touch do nothing |
+| **Wake it** | turn the wheel about 45°; it wakes right where you left it |
 | **Quit a game** | hold **Select** about 1 s, from any screen of any game |
 | **Power** | hold **Select** about 1.2 s to switch off (from Home or the menus); about 2 s to switch on |
 | **Touch** | works too: tap the tiles, the player buttons or "< Home" |
@@ -143,7 +142,7 @@ in [`08_BOM/`](08_BOM/).
 | [`1_Examples/`](1_Examples/) | LilyGo's original example sketches for the board. Not part of the console. |
 | [`2_Firmware/`](2_Firmware/) | The main program: screens, menus, buttons, touch, battery and charger, screen sleep, power off. Plus the board's schematic and datasheets. |
 | [`3_Music_App/`](3_Music_App/) | The music library, tag reader, playlists, the Music screens, the player and the PCM5122 DAC driver. Plus the auto-tagger tool. |
-| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea*, *Raise the Emerald City*, *Cat Nap*, *Ariadne's Thread* and *Lamplighter*, with their drawing, rules and synthesised sound. |
+| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea*, *Raise the Emerald City*, *Cat Nap*, *Ariadne's Thread*, *Lamplighter* and *White Heron*, with their drawing, rules and synthesised sound. |
 | [`5_Web_Uploader/`](5_Web_Uploader/) | The phone pages: song upload and the organizer. Also clock sync. |
 | [`6_Theme_Graphics/`](6_Theme_Graphics/) | The glass look, the Jigglypuff-pink theme, the landscape screen rotation and the Home artwork. |
 | [`07_Images/`](07_Images/) | Photos of the console and screenshots from it. |
