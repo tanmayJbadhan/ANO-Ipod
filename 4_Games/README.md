@@ -4,8 +4,8 @@ Opening **Games** shows a tile per game, eight in all, three on screen at a time
 (scroll with the wheel or Left/Right). Every picture in play is drawn from
 shapes and every sound synthesised, so the games need no image or audio files
 (only the storybook cards use a few public-domain engravings). `HalfRes.*` is
-shared by all of them: they draw at half resolution and it doubles the pixels on
-the way to the screen.
+shared by most of them: they draw at half resolution and it doubles the pixels
+on the way to the screen. *Lamplighter* draws at full resolution instead.
 
 In every game, holding **Select** for about a second quits straight to Home,
 whatever the game is doing.
@@ -144,6 +144,15 @@ bands, craters, ice caps, glowing lava cracks) read at a longitude
 nebulae are two layers of fractal value noise, made seamless left to right
 by `T(x) = ((w - x) f(x) + x f(x - w)) / w`. Rings and accretion discs draw
 their far half before the world and the near half after it.
+
+**Full resolution on two cores:** the frame is drawn at the screen's full
+456x280, in 14 strips of 20 rows, never as a whole frame (it wouldn't fit in
+fast memory). Every shape is drawn with smooth edges: a pixel a shape's edge
+crosses is blended by how much of it the shape covers, and the worlds' limbs
+by how far inside them each pixel centre lies, `(1 - d) R + 1/2`. The nebula
+is sampled bilinearly, so it stays soft. The second core draws the odd strips
+while this one draws the even ones and sends them to the panel, so a strip
+goes out while the next is being drawn.
 
 | File | What it does |
 |---|---|
@@ -399,7 +408,7 @@ while it plays, so the game needs no image or audio files.
 | File | What it does |
 |---|---|
 | `LullabyRun.*` | The game: the 11 districts (colours, skyline, props, rival, track), road and car physics, rivals and traffic, pickups (candy = boost, music note = sends cars to sleep, 3 hidden ducks), the district picker, HUD, pause and finish screens, unlocks and best times. |
-| `Raster.*` | A small shape renderer (rectangles, polygons, circles, lines) that draws into the game's frame buffer. |
+| `Raster.*` | A small shape renderer (rectangles, polygons, circles, lines) that draws into the game's frame buffer, or into one strip of it, with optional smooth edges. Each core has its own target. |
 | `RunAudio.*` | The engine sound, built live: an **EV** motor whine or a petrol (**ICE**) engine with gears and exhaust pops, plus tyre/wind noise and effects. Streams straight to the DAC. |
 | `preview/lullaby-run.html` | The same game in a web browser, used to design the look. Open it in any browser. |
 

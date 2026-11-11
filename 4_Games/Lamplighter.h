@@ -30,7 +30,9 @@ void key(const InputEvent &ev);
 void pause();
 bool wantsExit();
 bool wantsAudioPower();
-const uint16_t *frameBuffer(); // 228 x 140 RGB565, for screenshots
+const uint16_t *frameBuffer(); // 456 x 280 RGB565, for screenshots
+void benchEdge();              // USB bench only: a run that dives at the bottom edge
+void benchStats();             // USB bench only: frame timings every 2 s (toggles)
 void benchAutopilot();         // USB bench command only: a pilot flies (toggles)
 
 } // namespace Lamplighter

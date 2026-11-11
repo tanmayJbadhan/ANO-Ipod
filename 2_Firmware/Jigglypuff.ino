@@ -1300,6 +1300,9 @@ void serialCommands() {
   if ((c == 'g' || c == 'c') && screen == Screen::Home) {
     openApp(1);
     launchGame(c == 'g' ? 0 : 1);
+  } else if (c >= '0' && c < '0' + GAMES && screen == Screen::Home) {
+    openApp(1);
+    launchGame(c - '0');
   } else if (c == 'm' && screen == Screen::Home) openApp(0);
   else if (c == 'h') goHome();
   else if (c == 'w') wakeDisplay();
@@ -1329,7 +1332,8 @@ void serialCommands() {
     if (game == Game::Oz && gameActive()) { fb = EmeraldCity::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Cat && gameActive()) { fb = CatNap::frameBuffer(); w = 228; h = 140; }
     if (game == Game::Thread && gameActive()) { fb = Ariadne::frameBuffer(); w = 228; h = 140; }
-    if (game == Game::Lamp && gameActive()) { fb = Lamplighter::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Lamp && gameActive()) { fb = Lamplighter::frameBuffer(); w = 456; h = 280; } // full resolution
+    if (!fb) { fb = canvas->getFramebuffer(); w = LCD_WIDTH; h = LCD_HEIGHT; }
     if (game == Game::Fly && gameActive()) { fb = Crane::frameBuffer(); w = 228; h = 140; }
     Serial.printf("\nSHOT %d %d %d\n", w, h, (int)gfx->flipped());
     Serial.write((const uint8_t *)fb, (size_t)w * h * 2);
@@ -1346,6 +1350,10 @@ void serialCommands() {
     Crane::benchAutopilot();
   } else if (c == 'Z' && game == Game::Lamp) {
     Lamplighter::benchAutopilot();
+  } else if (c == 'E' && game == Game::Lamp) {
+    Lamplighter::benchEdge();
+  } else if (c == 'T' && game == Game::Lamp) {
+    Lamplighter::benchStats();
   } else if (c == 'Z' && game == Game::Oz) {
     EmeraldCity::benchAutoplay();
   } else if (c == 'Z' && game == Game::Tea) {

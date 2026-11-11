@@ -2,15 +2,20 @@
 
 #include <stdint.h>
 
-// A tiny software rasteriser for the racing game: filled shapes straight
-// into an RGB565 buffer laid out row by row in landscape (unlike the
-// portrait canvas, so the road's horizontal spans are contiguous memory).
-// Coordinates are floats, sampled at pixel centres; everything clips.
+// A tiny software rasteriser for the games: filled shapes straight into an
+// RGB565 buffer laid out row by row in landscape (unlike the portrait
+// canvas, so horizontal spans are contiguous memory). Coordinates are
+// floats, sampled at pixel centres; everything clips.
+//
+// Each core has its own target, scale and edge mode, so two cores can draw
+// different bands of one frame at the same time.
 namespace Raster {
 
 // Where drawing goes. The game draws its frame and its skyline layers
-// through the same functions, so the target is switchable.
-void target(uint16_t *buf, int16_t w, int16_t h);
+// through the same functions, so the target is switchable. A target can be
+// a band of a taller picture: its first row is row `top` of the picture,
+// and shapes are given (and clipped) in picture coordinates.
+void target(uint16_t *buf, int16_t w, int16_t h, int16_t top = 0);
 uint16_t *buffer();
 // Multiplies every coordinate and size passed to the shape functions (not
 // span(), which is raw pixels) - lets callers draw in screen units into a
@@ -18,6 +23,12 @@ uint16_t *buffer();
 void setScale(float k);
 int16_t width();
 int16_t height();
+int16_t top();
+// The buffer row for picture row y, or nullptr when y is outside the band.
+uint16_t *row(int y);
+// Smooth (anti-aliased) edges for poly, circle/ellipse, line and quad4:
+// edge pixels are blended by how much of them the shape covers.
+void smooth(bool on);
 
 uint16_t rgb(uint32_t hex);                          // 0xRRGGBB -> RGB565
 uint16_t mix(uint32_t a, uint32_t b, float t);       // blend in 8-bit space, t=0 -> a
