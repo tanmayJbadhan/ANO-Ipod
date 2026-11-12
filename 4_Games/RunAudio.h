@@ -32,4 +32,8 @@ enum Fx : uint8_t { Pop, PopSoft, Bonk, Squeak, Ding, DingHigh, DingTop, Thunder
                     Honk, Hop, Gull, Tock };
 void fx(Fx f);
 
+// Microseconds spent making sound since the last call (not counting the
+// wait for the DAC to take it) - for bench CPU reports.
+uint32_t takeBusyUs();
+
 } // namespace RunAudio

@@ -32,6 +32,18 @@ static const float PI_F = 3.14159265f;
 // Each texel packs its baked colour (RGB565, low 16 bits) and height
 // (bits 16-23, 0..255).
 static const int N = 512, MASK = N - 1;
+
+// Scratch for making a world, the water's ripple table and the heron's
+// vertices: on the heap only while the game is open (see enter), not in
+// fast RAM all the time.
+struct Mem {
+  uint32_t hist[256];
+  float line[N];
+  uint16_t col[N];
+  uint8_t ripple[64 * 64];
+  float heronV[64][3];
+};
+static Mem *s_mem = nullptr;
 static const int SEA = 72;           // the water level, in height units
 static const float ZFAR = 520;       // draw distance
 static const float TANF = 0.78f;     // tan of half the field of view (~76 degrees)
@@ -476,12 +488,12 @@ static void makeWorld(int which) {
   }
   // 1. Raw heights.
   float *raw = (float *)s_map;
-  static uint32_t hist[256];
+  uint32_t(&hist)[256] = s_mem->hist;
   parallel(heightRows, N);
   // Smooth away texel-sized roughness: the renderer turns it into stripes.
   loadingFrame(0.36f);
   {
-    static float line[N];
+    float(&line)[N] = s_mem->line;
     for (int pass = 0; pass < 2; pass++) {
       for (int y = 0; y < N; y++) {
         for (int x = 0; x < N; x++) {
@@ -606,7 +618,7 @@ static void makeWorld(int which) {
   }
   // 4b. Ambient occlusion: height against a 13 x 13 mean (two running sums).
   {
-    static uint16_t col[N];
+    uint16_t(&col)[N] = s_mem->col;
     for (int y = 0; y < N; y++) {
       int sum = 0;
       for (int k = -6; k <= 6; k++) sum += heightAt(k, y);
@@ -652,7 +664,7 @@ static void makeWorld(int which) {
 // water's ripples (a small tiling table), both from noise.
 static const int CW = 256, CH = 40;
 static uint8_t *s_clouds = nullptr;
-static uint8_t s_ripple[64 * 64];
+#define s_ripple (s_mem->ripple)
 
 static void makeSkyTables() {
   for (int y = 0; y < CH; y++)
@@ -1070,7 +1082,7 @@ static void drawHeron(float cx, float cy, float cz, float yaw, float bank, float
   float b = sinf(flap);
   float wa = b * 0.9f, wb = b * 1.9f, wc = b * 2.8f;       // elbow, wrist, tip lift
   float fold = b > 0 ? 1 - 0.12f * b : 1;                   // a little in on the upstroke
-  static float V[64][3];
+  float(&V)[64][3] = s_mem->heronV;
   int nv = 0;
   auto add = [&](float x, float y, float z) { V[nv][0] = x; V[nv][1] = y; V[nv][2] = z; return nv++; };
   // Body and head.
@@ -1454,7 +1466,10 @@ bool enter(LandscapeGFX *gfx, Arduino_GFX *panel) {
   s_clouds = (uint8_t *)heap_caps_malloc(CW * CH, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   s_mip1 = (uint32_t *)heap_caps_malloc((size_t)N * N, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   s_mip2 = (uint32_t *)heap_caps_malloc((size_t)N * N / 4, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  if (!s_frame || !s_depth || !s_map || !s_clouds || !s_mip1 || !s_mip2) {
+  s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (!s_mem) s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!s_frame || !s_depth || !s_map || !s_clouds || !s_mip1 || !s_mip2 || !s_mem) {
+    heap_caps_free(s_mem); s_mem = nullptr;
     heap_caps_free(s_mip1); s_mip1 = nullptr;
     heap_caps_free(s_mip2); s_mip2 = nullptr;
     heap_caps_free(s_frame); s_frame = nullptr;
@@ -1501,6 +1516,18 @@ void exit() {
   heap_caps_free(s_clouds); s_clouds = nullptr;
   heap_caps_free(s_mip1); s_mip1 = nullptr;
   heap_caps_free(s_mip2); s_mip2 = nullptr;
+  heap_caps_free(s_mem); s_mem = nullptr;
+#ifndef PC_SIM
+  // The second core's helper goes too (it's waiting for work, so this is
+  // safe), giving its stack back to the other games.
+  if (s_worker) {
+    vTaskDelete(s_worker);
+    vSemaphoreDelete(s_go);
+    vSemaphoreDelete(s_done);
+    s_worker = nullptr;
+    s_go = s_done = nullptr;
+  }
+#endif
   s_active = false;
 }
 

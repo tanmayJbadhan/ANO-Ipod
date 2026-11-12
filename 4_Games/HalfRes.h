@@ -14,5 +14,7 @@ static const int FW = W / 2, FH = H / 2; // the frame
 // Frame -> panel, rotated to the panel's portrait layout (upside down when
 // `flipped`, as the board sits in the case).
 void present(Arduino_GFX *panel, bool flipped, const uint16_t *frame);
+// Gives back the send buffer (taken on the first present) - on leaving a game.
+void release();
 
 } // namespace HalfRes

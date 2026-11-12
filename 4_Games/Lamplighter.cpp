@@ -66,7 +66,7 @@ static uint16_t *s_land[2] = {nullptr, nullptr};          // a strip as drawn, o
 static const int SLOTS = 4;
 static uint16_t *s_port[SLOTS] = {};                      // strips turned for the panel
 static uint16_t *s_shot = nullptr;                        // a whole frame, only for screenshots
-static uint16_t *s_neb = nullptr; // the nebula behind everything
+static uint16_t *s_neb = nullptr; // the nebula behind everything (one of s_nebTex)
 static const int NT_W = 160, NT_H = 100;
 static Preferences s_prefs;
 
@@ -353,22 +353,96 @@ static void spark(float x, float y, int n, uint32_t c, float speed) {
 // The nebula for a region: two layers of fractal noise in the region's
 // colours, made seamless left to right by blending f(x) with f(x - width):
 // T(x) = ((w - x) f(x) + x f(x - w)) / w.
-static void makeNebula(int reg) {
-  if (!s_neb) return;
+//
+// Making one takes a good fraction of a second, so it's never done all at
+// once mid-flight: three textures hold the region being flown, the next one
+// and the first (for restarts), and tendNebula() makes them a row or so per
+// frame, well before they're needed. Crossing into a region then swaps to
+// its ready sky, and the old one fades out over a second.
+static uint16_t *s_nebTex[3] = {};
+static int8_t s_nebReg[3] = {-1, -1, -1};
+static uint8_t s_nebRows[3] = {};   // rows made so far
+static uint16_t *s_nebOld = nullptr; // the sky fading out
+static float s_nebFade = 0;          // how much of it still shows, 1 -> 0
+
+static void nebulaRow(int slot) {
+  int reg = s_nebReg[slot], y = s_nebRows[slot]++;
   const Region &R = REG[reg];
   uint32_t seed = 101 + reg * 7919;
   const float U = NT_W * 0.045f;
-  for (int y = 0; y < NT_H; y++) {
-    uint32_t sky = mixHex(R.sky0, R.sky1, y / (float)(NT_H - 1));
-    for (int x = 0; x < NT_W; x++) {
-      float fx = x / (float)NT_W, u = x * 0.045f, v = y * 0.06f;
-      float n = (1 - fx) * fbm(u, v, seed) + fx * fbm(u - U, v, seed);
-      float n2 = (1 - fx) * fbm(u * 2.1f + 40, v * 2.1f, seed) + fx * fbm((u - U) * 2.1f + 40, v * 2.1f, seed);
-      float a = smooth(0.40f, 0.74f, n);
-      uint32_t c = mixHex(sky, R.neb0, a * 0.8f);
-      c = mixHex(c, R.neb1, smooth(0.55f, 0.85f, n2) * a * 0.65f);
-      s_neb[y * NT_W + x] = rgb(c);
+  uint32_t sky = mixHex(R.sky0, R.sky1, y / (float)(NT_H - 1));
+  uint16_t *out = s_nebTex[slot] + y * NT_W;
+  for (int x = 0; x < NT_W; x++) {
+    float fx = x / (float)NT_W, u = x * 0.045f, v = y * 0.06f;
+    float n = (1 - fx) * fbm(u, v, seed) + fx * fbm(u - U, v, seed);
+    float n2 = (1 - fx) * fbm(u * 2.1f + 40, v * 2.1f, seed) + fx * fbm((u - U) * 2.1f + 40, v * 2.1f, seed);
+    float a = smooth(0.40f, 0.74f, n);
+    uint32_t c = mixHex(sky, R.neb0, a * 0.8f);
+    c = mixHex(c, R.neb1, smooth(0.55f, 0.85f, n2) * a * 0.65f);
+    out[x] = rgb(c);
+  }
+}
+
+static int nebulaSlot(int reg) {
+  for (int i = 0; i < 3; i++) if (s_nebReg[i] == reg) return i;
+  return -1;
+}
+static bool nebulaReady(int reg) {
+  int s = nebulaSlot(reg);
+  return s >= 0 && s_nebRows[s] == NT_H;
+}
+
+// A texture for `reg`: its own, or one that isn't showing and holds none of
+// the `keep` regions. -1 if there's none to spare.
+static int nebulaClaim(int reg, const int *keep, int nKeep) {
+  int s = nebulaSlot(reg);
+  if (s >= 0) return s;
+  for (int i = 0; i < 3; i++) {
+    if (s_nebTex[i] == s_neb || s_nebTex[i] == s_nebOld) continue;
+    bool kept = false;
+    for (int k = 0; k < nKeep; k++) kept |= s_nebReg[i] == keep[k];
+    if (kept) continue;
+    s_nebReg[i] = (int8_t)reg;
+    s_nebRows[i] = 0;
+    return i;
+  }
+  return -1;
+}
+
+// The sky for `reg`, right now (on entering the game, or a restart).
+static void nebulaNow(int reg) {
+  int s = nebulaClaim(reg, nullptr, 0);
+  if (s < 0) return;
+  while (s_nebRows[s] < NT_H) nebulaRow(s);
+  s_neb = s_nebTex[s];
+  s_nebOld = nullptr;
+  s_nebFade = 0;
+}
+
+// Once a frame: fade, make rows of the skies wanted soon (the current
+// region's first) for up to `budgetUs`, and show the current one once ready.
+static void tendNebula(float dt, uint32_t budgetUs) {
+  if (s_nebFade > 0) {
+    s_nebFade -= dt;
+    if (s_nebFade <= 0) { s_nebFade = 0; s_nebOld = nullptr; }
+  }
+  int want = s_region < 0 ? 0 : s_region;
+  int order[3] = {want, (want + 1) % 5, 0};
+  uint32_t t0 = micros();
+  bool spent = false;
+  for (int i = 0; i < 3 && !spent; i++) {
+    int s = nebulaClaim(order[i], order, 3);
+    if (s < 0) continue;
+    while (s_nebRows[s] < NT_H && !spent) {
+      nebulaRow(s);
+      spent = micros() - t0 >= budgetUs;
     }
+  }
+  int s = nebulaSlot(want);
+  if (s >= 0 && s_nebRows[s] == NT_H && s_nebTex[s] != s_neb) {
+    s_nebOld = s_neb;
+    s_nebFade = s_neb ? 1 : 0;
+    s_neb = s_nebTex[s];
   }
 }
 
@@ -394,7 +468,11 @@ static void newRun(float startX = 0) {
   s_lastX = startX;
   spawnBody(true);
   while (s_lastX < s_camX + W + 420) spawnBody(false);
-  if (s_region != regionAt(startX)) { s_region = regionAt(startX); makeNebula(s_region); }
+  // A restart's sky is usually ready and swaps in at once; only the very
+  // first is made on the spot. (A bench jump elsewhere keeps the old sky
+  // until tendNebula has made the new one.)
+  s_region = regionAt(startX);
+  if (!s_neb || nebulaReady(s_region)) nebulaNow(s_region);
   s_bannerT = 3;
   s_clock = 0;
   s_shake = 0;
@@ -606,8 +684,7 @@ static void update(float dt) {
   // Regions.
   int reg = regionAt(s_x);
   if (reg != s_region) {
-    s_region = reg;
-    makeNebula(reg);
+    s_region = reg; // its sky was made on the way here (see tendNebula)
     s_bannerT = 3.5f;
     RunAudio::fx(RunAudio::DingTop);
   }
@@ -739,6 +816,7 @@ static void drawNebula() {
   if (u0 < 0) u0 += NT_W;
   const uint32_t du = (uint32_t)(uScale * 2 * 65536), wrap = (uint32_t)NT_W << 16;
   uint32_t texRow[NT_W + 1];
+  uint32_t oldA = s_nebOld ? (uint32_t)(s_nebFade * 32 + 0.5f) : 0; // 0..32
   for (int py = y0; py < y1; py++) {
     float tyf = (py + oy + 60) * NT_H / (float)(H + 120) - 0.5f;
     if (tyf < 0) tyf = 0;
@@ -747,6 +825,10 @@ static void drawNebula() {
     uint32_t fy = (uint32_t)((tyf - ty) * 32);
     const uint16_t *a = s_neb + ty * NT_W, *b = s_neb + ty1 * NT_W;
     for (int x = 0; x < NT_W; x++) texRow[x] = lerp5(spread(a[x]), spread(b[x]), fy);
+    if (oldA) { // the previous region's sky, fading out
+      const uint16_t *oa = s_nebOld + ty * NT_W, *ob = s_nebOld + ty1 * NT_W;
+      for (int x = 0; x < NT_W; x++) texRow[x] = lerp5(texRow[x], lerp5(spread(oa[x]), spread(ob[x]), fy), oldA);
+    }
     texRow[NT_W] = texRow[0];
     uint16_t *r = row(py);
     uint32_t u = (uint32_t)(u0 * 65536);
@@ -1294,8 +1376,8 @@ static void drawPicture() {
 // Bench timings (see benchStats), in microseconds, summed over a report.
 static struct Stats {
   bool on;
-  uint32_t since, frames, frameSum, frameMax, draw, send, wait, steps[4];
-  volatile uint32_t wDraw;
+  uint32_t since, frames, frameSum, frameMax, draw, send, wait, steps[4], upd, bake, prep;
+  volatile uint32_t wDraw, wSpin;
   float maxY;
 } s_st;
 
@@ -1344,8 +1426,10 @@ static void workerTask(void *) {
     for (;;) {
       int k = takeStrip();
       if (k >= STRIPS) break;
-      while (k - SLOTS >= s_sent) {} // its slot is still waiting to go out
       uint32_t t0 = micros();
+      while (k - SLOTS >= s_sent) {} // its slot is still waiting to go out
+      s_st.wSpin += micros() - t0;
+      t0 = micros();
       drawTaken(k, s_land[1]);
       s_st.wDraw += micros() - t0;
     }
@@ -1355,7 +1439,9 @@ static void workerTask(void *) {
 #endif
 
 static void render() {
+  uint32_t t0 = micros();
   prepare();
+  s_st.prep += micros() - t0;
   memset((void *)s_ready, 0, sizeof(s_ready));
   s_sent = 0;
   __atomic_store_n(&s_nextStrip, 0, __ATOMIC_RELEASE);
@@ -1402,7 +1488,8 @@ static void freeBuffers() {
   for (uint16_t *&p : s_land) { heap_caps_free(p); p = nullptr; }
   for (uint16_t *&p : s_port) { heap_caps_free(p); p = nullptr; }
   heap_caps_free(s_shot); s_shot = nullptr;
-  heap_caps_free(s_neb); s_neb = nullptr;
+  for (uint16_t *&p : s_nebTex) { heap_caps_free(p); p = nullptr; }
+  s_neb = s_nebOld = nullptr;
 }
 
 bool enter(LandscapeGFX *gfx, Arduino_GFX *panel) {
@@ -1412,8 +1499,15 @@ bool enter(LandscapeGFX *gfx, Arduino_GFX *panel) {
   bool ok = true;
   for (uint16_t *&p : s_land) ok = (p = stripAlloc()) && ok;
   for (uint16_t *&p : s_port) ok = (p = stripAlloc()) && ok;
-  s_neb = (uint16_t *)heap_caps_malloc((size_t)NT_W * NT_H * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  if (!ok || !s_neb) {
+  for (int i = 0; i < 3; i++) {
+    s_nebTex[i] = (uint16_t *)heap_caps_malloc((size_t)NT_W * NT_H * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    ok = s_nebTex[i] && ok;
+    s_nebReg[i] = -1;
+    s_nebRows[i] = 0;
+  }
+  s_neb = s_nebOld = nullptr;
+  s_nebFade = 0;
+  if (!ok) {
     freeBuffers();
     Serial.println("Lamplighter: not enough memory");
     return false;
@@ -1454,6 +1548,17 @@ void exit() {
   RunAudio::stop();
   s_prefs.end();
   freeBuffers();
+#ifndef PC_SIM
+  // The second core's helper goes too (it's waiting for work, so this is
+  // safe), giving its stack back to the other games.
+  if (s_worker) {
+    vTaskDelete(s_worker);
+    vSemaphoreDelete(s_go);
+    vSemaphoreDelete(s_done);
+    s_worker = nullptr;
+    s_go = s_done = nullptr;
+  }
+#endif
   s_active = false;
 }
 
@@ -1557,7 +1662,14 @@ void frame(Input &input, TouchInput &touch, int32_t wheel) {
   // 1/60 s steps would give some frames 2 and some 3, a visible judder).
   int steps = (int)ceilf(dt * 60 - 0.001f);
   if (steps < 1) steps = 1;
+  uint32_t tu = micros();
   for (int i = 0; i < steps; i++) update(dt / steps);
+  s_st.upd += micros() - tu;
+  tu = micros();
+  // A few ms a frame on the skies ahead; more if the one we're in isn't
+  // ready yet (only after a bench jump), so it's never a long wait.
+  tendNebula(dt, nebulaReady(s_region < 0 ? 0 : s_region) ? 3000 : 15000);
+  s_st.bake += micros() - tu;
   render();
 
   if (s_st.on) {
@@ -1584,6 +1696,23 @@ void frame(Input &input, TouchInput &touch, int32_t wheel) {
         Serial.printf(" %s %.1f/%.1f", names[i], s_sec[1][i] / 1000.0f / n, s_sec[0][i] / 1000.0f / n);
       }
       Serial.printf("\n");
+      // Where each core's time went, as a share of the time measured.
+      float T = s_st.frameSum / 100.0f, audio = RunAudio::takeBusyUs() / T;
+      float c0draw = s_st.wDraw / T, c0spin = s_st.wSpin / T;
+      Serial.printf("   cpu core1 (game): update %.0f%% sky-making %.0f%% prepare %.0f%% draw %.0f%% send %.0f%% wait %.0f%% = %.0f%%"
+                    "  | core0: draw %.0f%% wait %.0f%% audio %.0f%% free %.0f%%\n",
+                    s_st.upd / T, s_st.bake / T, s_st.prep / T, s_st.draw / T, s_st.send / T, s_st.wait / T,
+                    (s_st.upd + s_st.bake + s_st.prep + s_st.draw + s_st.send + s_st.wait) / T,
+                    c0draw, c0spin, audio, 100 - c0draw - c0spin - audio);
+#ifndef PC_SIM
+      Serial.printf("   ram internal free %u KB (lowest %u, largest block %u)  psram free %u of %u KB  stack left: game %u worker %u bytes\n",
+                    (unsigned)(heap_caps_get_free_size(MALLOC_CAP_INTERNAL) / 1024),
+                    (unsigned)(heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL) / 1024),
+                    (unsigned)(heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL) / 1024),
+                    (unsigned)(heap_caps_get_free_size(MALLOC_CAP_SPIRAM) / 1024),
+                    (unsigned)(heap_caps_get_total_size(MALLOC_CAP_SPIRAM) / 1024),
+                    (unsigned)uxTaskGetStackHighWaterMark(nullptr), (unsigned)uxTaskGetStackHighWaterMark(s_worker));
+#endif
       memset((void *)s_sec, 0, sizeof(s_sec));
       memset((void *)&s_st, 0, sizeof(s_st));
       s_st.on = true;

@@ -35,6 +35,13 @@ void fx(Fx f) {
 
 bool running() { return s_run; }
 
+static volatile uint32_t s_busyUs = 0;
+uint32_t takeBusyUs() {
+  uint32_t b = s_busyUs;
+  s_busyUs = 0;
+  return b;
+}
+
 // ---------------------------------------------------------------------------
 // Building blocks
 // ---------------------------------------------------------------------------
@@ -167,6 +174,7 @@ static void synthTask(void *) {
   const float kFast = 1.0f - expf(-blockSec / 0.02f);
 
   for (;;) {
+    uint32_t busyFrom = micros();
     if (s_stopReq && master < 0.0005f) break;
     while (s_evTail != s_evHead) {
       handleEvent(s_evq[s_evTail]);
@@ -270,6 +278,7 @@ static void synthTask(void *) {
     }
 
     size_t written;
+    s_busyUs += micros() - busyFrom;
     i2s_write(I2S_NUM_0, buf, sizeof(buf), &written, portMAX_DELAY);
   }
 

@@ -7,6 +7,7 @@
 #include <WiFi.h>
 #include <SD.h>
 #include <strings.h>
+#include <esp_heap_caps.h>
 
 namespace {
 
@@ -296,16 +297,32 @@ load();
 
 // Big chunks matter: each chunk costs WiFi round trips, and 1.5 KB chunks
 // took over a minute for a thousand songs.
+//
+// Big scratch buffers come from PSRAM for one request and go back after,
+// so the organizer holds no fast internal RAM the rest of the time.
+template <typename T> struct Scratch {
+  T *p;
+  explicit Scratch(size_t n) : p((T *)heap_caps_malloc(n * sizeof(T), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)) {}
+  ~Scratch() { heap_caps_free(p); }
+  Scratch(const Scratch &) = delete;
+  Scratch &operator=(const Scratch &) = delete;
+};
+
 struct Json {
-  static char buf[8192];
+  static const size_t CAP = 8192;
+  Scratch<char> mem{CAP};
+  char *buf = mem.p; // (if PSRAM is somehow out, replies are sent in tiny pieces)
+  char tiny[64];
+  size_t cap = buf ? CAP : sizeof(tiny);
   size_t n = 0;
+  Json() { if (!buf) buf = tiny; }
   void flush() {
     if (n) srv->sendContent(buf, n);
     n = 0;
   }
   void raw(const char *s) {
     while (*s) {
-      if (n >= sizeof(buf) - 8) flush();
+      if (n >= cap - 8) flush();
       buf[n++] = *s++;
     }
   }
@@ -317,7 +334,7 @@ struct Json {
   void str(const char *s) {
     raw("\"");
     for (; *s; s++) {
-      if (n >= sizeof(buf) - 8) flush();
+      if (n >= cap - 8) flush();
       uint8_t c = (uint8_t)*s;
       if (c == '"' || c == '\\') { buf[n++] = '\\'; buf[n++] = c; }
       else if (c < 0x20) n += snprintf(buf + n, 8, "\\u%04x", c);
@@ -326,8 +343,6 @@ struct Json {
     raw("\"");
   }
 };
-
-char Json::buf[8192];
 
 void begin(Json &) {
   // No WiFi power saving (it adds ~100 ms to every round trip) and no
@@ -357,7 +372,9 @@ void song(Json &j, uint16_t id) {
 }
 
 void playlists(Json &j) {
-  static uint16_t ids[Library::MAX_TRACKS];
+  Scratch<uint16_t> idMem(Library::MAX_TRACKS);
+  uint16_t *ids = idMem.p;
+  if (!ids) return j.raw("[]");
   j.raw("[");
   for (uint8_t i = 0; i < Playlists::count(); i++) {
     if (i) j.raw(",");
@@ -439,7 +456,9 @@ void handleLibrary() {
 
 void handleEdit() {
   if (!ensureLibrary()) return fail(503, "No SD card");
-  static uint16_t ids[Library::MAX_TRACKS];
+  Scratch<uint16_t> idMem(Library::MAX_TRACKS);
+  uint16_t *ids = idMem.p;
+  if (!ids) return fail(503, "Out of memory");
   uint16_t n = parseIds(srv->arg("ids"), ids, Library::MAX_TRACKS);
   if (!n) return fail(400, "No songs chosen");
   String title = srv->arg("title"), artist = srv->arg("artist"), album = srv->arg("album");
@@ -469,7 +488,9 @@ void handlePlaylist() {
   String action = srv->arg("action");
   int p = srv->hasArg("p") ? srv->arg("p").toInt() : -1;
   bool validP = p >= 0 && p < Playlists::count();
-  static uint16_t ids[Library::MAX_TRACKS];
+  Scratch<uint16_t> idMem(Library::MAX_TRACKS);
+  uint16_t *ids = idMem.p;
+  if (!ids) return fail(503, "Out of memory");
   char msg[64] = "Done";
   int index = -1;
 
@@ -560,9 +581,11 @@ void handleSong() {
 
   f.seek(start);
   uint32_t left = end - start + 1;
-  static uint8_t buf[8192];
-  while (left > 0) {
-    int n = f.read(buf, left < sizeof(buf) ? left : sizeof(buf));
+  const uint32_t BUF = 8192;
+  Scratch<uint8_t> mem(BUF);
+  uint8_t *buf = mem.p;
+  while (buf && left > 0) {
+    int n = f.read(buf, left < BUF ? left : BUF);
     if (n <= 0) break;
     if (srv->client().write(buf, n) != (size_t)n) break; // browser gave up on this part
     left -= n;

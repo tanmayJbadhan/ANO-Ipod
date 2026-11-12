@@ -62,6 +62,7 @@
 #include "CatNap.h"
 #include "Ariadne.h"
 #include "Lamplighter.h"
+#include "HalfRes.h"
 #include "Crane.h"
 #include "WifiConfig.h"
 
@@ -665,6 +666,7 @@ void gameExit() {
   else if (game == Game::Thread) Ariadne::exit();
   else if (game == Game::Lamp) Lamplighter::exit();
   else if (game == Game::Fly) Crane::exit();
+  HalfRes::release();
   game = Game::None;
 }
 

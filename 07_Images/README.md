@@ -32,12 +32,12 @@ game's own code (the same pixels the console draws).
 | `screen-white-heron-snow-lake.png` | *White Heron*: through a ring of wind over Snow Lake, in the mist. |
 | `screen-white-heron-white-cliffs.png` | *White Heron*: the limestone islands and turquoise shallows of White Cliffs. |
 | `white-heron-worlds.png` | *White Heron*: the four generated worlds seen from above. |
-| `screen-lamplighter-title.png` | *Lamplighter*: the title, the Moth orbiting a lit ringed world. |
-| `screen-lamplighter-amber.png` | *Lamplighter*: orbiting a rocky world in the Amber Shallows, its lamp sweeping. |
-| `screen-lamplighter-rings.png` | *Lamplighter*: catching a ringed giant in the Ring Gardens. |
-| `screen-lamplighter-comets.png` | *Lamplighter*: a comet crossing the Comet Nursery. |
-| `screen-lamplighter-rose.png` | *Lamplighter*: a sleeping star in the Rose Nebula. |
-| `screen-lamplighter-deep.png` | *Lamplighter*: a dark star and its accretion disc in the Deep. |
+| `screen-lamplighter-title.png` | *Lamplighter*: the title, the Moth orbiting a lit ringed world (full resolution, like all the *Lamplighter* shots). |
+| `screen-lamplighter-amber.png` | *Lamplighter*: lighting a rocky world in the Amber Shallows, a banded giant ahead. |
+| `screen-lamplighter-rings.png` | *Lamplighter*: orbiting a ringed world in the Ring Gardens. |
+| `screen-lamplighter-comets.png` | *Lamplighter*: swinging past a red world in the Comet Nursery, among the rocks. |
+| `screen-lamplighter-rose.png` | *Lamplighter*: lighting a world's lamp in the Rose Nebula. |
+| `screen-lamplighter-deep.png` | *Lamplighter*: lighting a world beside a sleeping star in the Deep. |
 | `screen-ariadne-title.png` | *Ariadne's Thread*: the title, with the Cretan labyrinth of the Knossos coins. |
 | `screen-ariadne-loom.png` | *Ariadne's Thread*, Prologue: Ariadne at her loom. |
 | `screen-ariadne-maze.png` | *Ariadne's Thread*, Act I: Theseus in the torch-lit labyrinth, the thread behind him. |

@@ -262,9 +262,16 @@ static Seg *s_segs = nullptr;
 static Sprite *s_sprites = nullptr;
 static int s_N = 0, s_nSprites = 0;
 static float s_trackLength = 0;
-static Car s_cars[MAX_CARS];
+// The cars and the per-frame road projection live on the heap only while
+// the game is open (see enter), not in fast RAM all the time.
+struct Mem {
+  Car cars[MAX_CARS];
+  Proj proj[DRAW];
+};
+static Mem *s_mem = nullptr;
+#define s_cars (s_mem->cars)
+#define s_proj (s_mem->proj)
 static int s_nCars = 0;
-static Proj s_proj[DRAW];
 static bool s_active = false, s_exit = false;
 static Preferences s_prefs;
 
@@ -1905,6 +1912,7 @@ static void freeAll() {
   heap_caps_free(s_layerNear); s_layerNear = nullptr;
   heap_caps_free(s_segs); s_segs = nullptr;
   heap_caps_free(s_sprites); s_sprites = nullptr;
+  heap_caps_free(s_mem); s_mem = nullptr;
 }
 
 bool enter(LandscapeGFX *gfx, Arduino_Canvas *canvas, Arduino_GFX *panel) {
@@ -1922,7 +1930,9 @@ bool enter(LandscapeGFX *gfx, Arduino_Canvas *canvas, Arduino_GFX *panel) {
   s_layerNear = (uint16_t *)bigAlloc((size_t)LW * LH * 2, false);
   s_segs = (Seg *)bigAlloc(sizeof(Seg) * MAX_SEGS, false);
   s_sprites = (Sprite *)bigAlloc(sizeof(Sprite) * MAX_SPRITES, false);
-  if (!s_frame || !s_layerFar || !s_layerNear || !s_segs || !s_sprites) {
+  s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (!s_mem) s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!s_frame || !s_layerFar || !s_layerNear || !s_segs || !s_sprites || !s_mem) {
     freeAll();
     Serial.println("Lullaby Run: not enough memory");
     return false;

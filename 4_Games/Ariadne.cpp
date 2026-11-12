@@ -341,8 +341,27 @@ static const MazeSpec MS[4] = {
 };
 
 static uint8_t s_open[MAXCH][MAXCW]; // N 1, E 2, S 4, W 8
-static uint8_t s_tile[MAXTH][MAXTW], s_deco[MAXTH][MAXTW], s_lightS[MAXTH][MAXTW], s_seen[MAXTH][MAXTW];
-static uint8_t s_door[MAXTH][MAXTW]; // door group + 1
+// The maze's big arrays live on the heap only while the game is open (see
+// enter), rather than holding fast RAM all the time. The names below stand
+// for them, so the code reads as if they were plain arrays.
+struct Mem {
+  uint8_t tile[MAXTH][MAXTW], deco[MAXTH][MAXTW], lightS[MAXTH][MAXTW], seen[MAXTH][MAXTW];
+  uint8_t door[MAXTH][MAXTW];  // door group + 1
+  int16_t path[MAXTH * MAXTW]; // the thread, tile indices
+  float scent[MAXTH][MAXTW];   // the Minotaur's scent, and its next step
+  float scentNext[MAXTH][MAXTW];
+  int braid[64][3], bestBraid[64][3];                   // making a maze
+  int16_t hintPar[MAXTH * MAXTW], hintQ[MAXTH * MAXTW]; // its hint axes
+  int16_t botDist[MAXTH * MAXTW], botQ[MAXTH * MAXTW];  // the bench bot
+};
+static Mem *s_mem = nullptr;
+#define s_tile (s_mem->tile)
+#define s_deco (s_mem->deco)
+#define s_lightS (s_mem->lightS)
+#define s_seen (s_mem->seen)
+#define s_door (s_mem->door)
+#define s_path (s_mem->path)
+#define s_scent (s_mem->scent)
 static int s_cw, s_chh, s_tw, s_th;
 static int s_sx, s_sy, s_gx, s_gy;   // start and goal tiles
 static const MazeSpec *M = &MS[0];
@@ -534,7 +553,8 @@ static void makeMaze(int which) {
   s_cw = M->cw; s_chh = M->ch;
   s_tw = s_cw * 2 + 1; s_th = s_chh * 2 + 1;
   seedNoise(esp_random());
-  static int braid[64][3], bestBraid[64][3];
+  int(&braid)[64][3] = s_mem->braid;
+  int(&bestBraid)[64][3] = s_mem->bestBraid;
   int nb = 0, bestNb = 0;
   int best = 0;
   // Five candidates; keep the fittest (two buffers, swapped).
@@ -588,8 +608,8 @@ static void makeMaze(int which) {
   }
   // The double axes along the true path (BFS parents over tiles).
   if (M->hints) {
-    static int16_t par[MAXTH * MAXTW];
-    static int16_t q[MAXTH * MAXTW];
+    int16_t(&par)[MAXTH * MAXTW] = s_mem->hintPar;
+    int16_t(&q)[MAXTH * MAXTW] = s_mem->hintQ;
     for (int i = 0; i < s_tw * s_th; i++) par[i] = -2;
     int h = 0, t = 0;
     q[t++] = s_sy * s_tw + s_sx; par[q[0]] = -1;
@@ -630,7 +650,6 @@ static void makeMaze(int which) {
 
 static int s_px, s_py, s_tx, s_ty, s_face = 2;
 static float s_move = 1;              // 0..1 between (px,py) and (tx,ty)
-static int16_t s_path[MAXTH * MAXTW]; // the thread, tile indices
 static int s_plen = 0, s_budget = 0;
 static float s_walk = 0;
 static char s_note[28];
@@ -640,7 +659,6 @@ static void note(const char *t) { strlcpy(s_note, t, sizeof(s_note)); s_noteT = 
 
 // The Minotaur in the dark, and the scent it follows:
 // u' = u + D (u_N + u_S + u_E + u_W - 4u) - lambda u, with u = 1 at Theseus.
-static float s_scent[MAXTH][MAXTW];
 static int s_mx, s_my, s_mtx, s_mty;
 static float s_mmove = 1, s_scentT = 0, s_beatT = 0;
 
@@ -718,7 +736,7 @@ static void updateMaze(float dt) {
     s_scentT += dt;
     while (s_scentT >= 0.1f) {
       s_scentT -= 0.1f;
-      static float nu[MAXTH][MAXTW];
+      float(&nu)[MAXTH][MAXTW] = s_mem->scentNext;
       for (int y = 1; y < s_th - 1; y++)
         for (int x = 1; x < s_tw - 1; x++) {
           if (!passable(x, y)) { nu[y][x] = 0; continue; }
@@ -1902,7 +1920,8 @@ static void render() {
 // at a shut one). It doesn't dodge the Minotaur.
 static void botMaze() {
   if (s_move < 1) return;
-  static int16_t dist[MAXTH * MAXTW], q[MAXTH * MAXTW];
+  int16_t(&dist)[MAXTH * MAXTW] = s_mem->botDist;
+  int16_t(&q)[MAXTH * MAXTW] = s_mem->botQ;
   for (int i = 0; i < s_tw * s_th; i++) dist[i] = -1;
   int h = 0, t = 0;
   dist[s_gy * s_tw + s_gx] = 0;
@@ -2041,9 +2060,12 @@ bool enter(LandscapeGFX *gfx, Arduino_GFX *panel) {
   s_frame = (uint16_t *)heap_caps_malloc((size_t)FW * FH * 2, MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
   if (!s_frame) s_frame = (uint16_t *)heap_caps_malloc((size_t)FW * FH * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   s_cand = (Candidate *)heap_caps_malloc(sizeof(Candidate) * 2, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  if (!s_frame || !s_cand) {
+  s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (!s_mem) s_mem = (Mem *)heap_caps_calloc(1, sizeof(Mem), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!s_frame || !s_cand || !s_mem) {
     heap_caps_free(s_frame); s_frame = nullptr;
     heap_caps_free(s_cand); s_cand = nullptr;
+    heap_caps_free(s_mem); s_mem = nullptr;
     Serial.println("Ariadne: not enough memory");
     return false;
   }
@@ -2074,6 +2096,7 @@ void exit() {
   s_prefs.end();
   heap_caps_free(s_frame); s_frame = nullptr;
   heap_caps_free(s_cand); s_cand = nullptr;
+  heap_caps_free(s_mem); s_mem = nullptr;
   s_active = false;
 }
 
