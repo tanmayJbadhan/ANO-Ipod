@@ -14,6 +14,23 @@ whatever the game is doing.
 
 A 3D detective RPG in a gaslamp world where everyone raises partner creatures. You play Wren Ashby, apprentice to Professor Vane, who "fell" at Calder Falls a year ago.
 
+<p align="center">
+  <img src="../07_Images/screen-gaslight-title.png" width="45%" alt="Gaslight & Griffins: the title over Fogmouth">
+  <img src="../07_Images/screen-gaslight-fogmouth.png" width="45%" alt="Gaslight & Griffins: Wren on a Fogmouth street at dusk">
+</p>
+<p align="center">
+  <img src="../07_Images/screen-gaslight-sandmere.png" width="45%" alt="Gaslight & Griffins: the square at Sandmere">
+  <img src="../07_Images/screen-gaslight-skjold.png" width="45%" alt="Gaslight & Griffins: snowy Skjold">
+</p>
+<p align="center">
+  <img src="../07_Images/screen-gaslight-greenwold.png" width="45%" alt="Gaslight & Griffins: Greenwold">
+  <img src="../07_Images/screen-gaslight-wilds.png" width="45%" alt="Gaslight & Griffins: the Wild Wood, made by the land model">
+</p>
+<p align="center">
+  <img src="../07_Images/screen-gaslight-team.png" width="45%" alt="Gaslight & Griffins: the team panel">
+  <img src="../07_Images/screen-gaslight-boss.png" width="45%" alt="Gaslight & Griffins: a boss battle with the Curator of Scales">
+</p>
+
 There are four towns, each built on an old myth, and each town's crime echoes its myth:
 
 | Town | Myth | Case |

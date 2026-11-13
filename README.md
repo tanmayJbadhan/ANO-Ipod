@@ -63,6 +63,12 @@ to go back to Home.
 
 **Gaslight & Griffins** is the ninth tile: a 3D detective RPG across four towns built on old myths, with partner creatures, deduction, interrogations and four endings.
 
+<p align="center">
+  <img src="07_Images/screen-gaslight-fogmouth.png" width="32%" alt="Gaslight & Griffins: Fogmouth">
+  <img src="07_Images/screen-gaslight-sandmere.png" width="32%" alt="Gaslight & Griffins: Sandmere">
+  <img src="07_Images/screen-gaslight-boss.png" width="32%" alt="Gaslight & Griffins: a boss battle">
+</p>
+
 Rules, stories, controls and more screenshots for each game are in
 [`4_Games/`](4_Games/).
 
