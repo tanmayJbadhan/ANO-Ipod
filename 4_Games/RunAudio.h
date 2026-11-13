@@ -28,6 +28,10 @@ struct Params {
 };
 void set(const Params &p);
 
+// A music source mixed under everything else: called on the synth's core once per
+// block to fill n mono samples (44.1 kHz). nullptr for none. Set it before start().
+void setMusic(void (*fn)(float *out, int n));
+
 enum Fx : uint8_t { Pop, PopSoft, Bonk, Squeak, Ding, DingHigh, DingTop, Thunder, Hoot, Tick,
                     Honk, Hop, Gull, Tock };
 void fx(Fx f);
@@ -35,5 +39,7 @@ void fx(Fx f);
 // Microseconds spent making sound since the last call (not counting the
 // wait for the DAC to take it) - for bench CPU reports.
 uint32_t takeBusyUs();
+// Bytes of the synth task's stack never used (0 when it isn't running) - for bench reports.
+uint32_t stackLeft();
 
 } // namespace RunAudio

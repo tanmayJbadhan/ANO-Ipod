@@ -25,6 +25,9 @@ static volatile uint8_t s_evHead = 0, s_evTail = 0;
 
 void set(const Params &p) { s_p = p; }
 
+static void (*volatile s_music)(float *, int) = nullptr;
+void setMusic(void (*fn)(float *, int)) { s_music = fn; }
+
 void fx(Fx f) {
   if (!s_run) return;
   uint8_t n = (s_evHead + 1) & 15;
@@ -34,6 +37,7 @@ void fx(Fx f) {
 }
 
 bool running() { return s_run; }
+uint32_t stackLeft() { return s_run && s_task ? (uint32_t)uxTaskGetStackHighWaterMark(s_task) : 0; }
 
 static volatile uint32_t s_busyUs = 0;
 uint32_t takeBusyUs() {
@@ -224,11 +228,15 @@ static void synthTask(void *) {
     uint32_t i1 = inc(fire.v), i2 = inc(fire.v / 2), i3 = inc(fire.v * 2), ilfo = inc(fire.v / 2);
     uint32_t itw = inc(twF.v), ie1 = inc(e1f.v), ie2 = inc(e2f.v), ie3 = inc(e3f.v), ie4 = inc(e4f.v);
     const float hpA = 1.0f / (1.0f + TWO_PI_F * 50.0f / RATE); // 50 Hz high-pass
+    static float mbuf[BLOCK];
+    void (*music)(float *, int) = s_music;
+    if (music) music(mbuf, BLOCK);
 
     for (int n = 0; n < BLOCK; n++) {
       // Tyres and wind.
       tyre.run(noise());
       float out = tyre.bp * ng.v;
+      if (music) out += mbuf[n];
 
       // ICE.
       if (iceG.v > 0.001f) {

@@ -1,0 +1,115 @@
+"""Builds Gaslight/Engravings.h: public-domain myth illustrations for the
+scene cards, as 4-bit greyscale (drawn in sepia by Cards.cpp).
+
+usage: python make_cards.py ../Gaslight/Engravings.h [cache_dir]
+
+Every picture is public domain or CC0 on Wikimedia Commons; the list below
+records the file and artist, and CREDITS.md repeats them. Needs Pillow.
+Downloads politely (one at a time, retrying when told to slow down) and keeps
+a local cache so re-running doesn't fetch again.
+"""
+import io
+import os
+import sys
+import time
+import json
+import urllib.parse
+import urllib.request
+from PIL import Image, ImageOps, ImageFilter
+
+UA = {"User-Agent": "GameAssetTool/1.0 (personal hobby project; one request at a time)"}
+PW, PH = 408, 150  # the card's picture area
+
+# card id, Commons file, crop (left, top, right, bottom as fractions), credit
+CARDS = [
+    (0, "OdysseySirens.png", (0.0, 0.08, 1.0, 0.92), "John Flaxman, Ulysses and the Sirens (1805), public domain"),
+    (1, "OdysseyPolyphemos.png", (0.0, 0.1, 1.0, 0.9), "John Flaxman, Polyphemus (1805), public domain"),
+    (2, "Plate 8- Ulysses receiving the winds in a leather bag from Aeolus Met DP885417.jpg", (0.04, 0.22, 0.96, 0.62),
+     "John Flaxman, Ulysses receiving the winds from Aeolus (Metropolitan Museum, CC0)"),
+    (4, "BD Hunefer cropped 1.jpg", (0.0, 0.05, 1.0, 0.95), "Papyrus of Hunefer, the weighing of the heart (c. 1275 BC), public domain"),
+    (5, "Ammit BD.jpg", (0.0, 0.0, 1.0, 1.0), "Book of the Dead, Ammit (public domain)"),
+    (6, "Osiris, God of the Dead.jpg", (0.0, 0.0, 1.0, 1.0), "Papyrus of Hunefer, Osiris enthroned, public domain"),
+    (7, "Sphinx and Pyramids (1890) - TIMEA.jpg", (0.0, 0.15, 1.0, 0.85), "The Sphinx and the Pyramids (1890), public domain"),
+    (8, "Sir Gawain and the Green Knight, from Pearl Manuscript.jpg", (0.0, 0.1, 1.0, 0.75), "Cotton Nero A.x, the Green Knight at Camelot (c. 1400), public domain"),
+    (9, "Sggk-illustration-and-first-page.jpg", (0.0, 0.0, 0.5, 1.0), "Cotton Nero A.x, Gawain illustration (c. 1400), public domain"),
+    (10, "Sir Gawain seized his lance and bade them farewell.png", (0.0, 0.2, 1.0, 0.75), "Frank T. Merrill, Sir Gawain sets out (1902), public domain"),
+    (12, "Odin, Sleipnir, Geri, Freki, Huginn and Muninn by Frølich.jpg", (0.0, 0.15, 1.0, 0.85), "Lorenz Frølich, Odin with Huginn and Muninn (1895), public domain"),
+    (13, "The Norns by H. L. M.jpg", (0.0, 0.3, 1.0, 0.7), "H. L. M., The Norns (1882), public domain"),
+    (16, "The Chaldean Account of Genesis (1876) - illustration - page 239.png", (0.0, 0.1, 1.0, 0.9), "George Smith, The Chaldean Account of Genesis (1876), public domain"),
+    (17, "ISHTAR-EPOS p082 HEABANI, THE HERMIT-SEER.jpg", (0.0, 0.3, 1.0, 0.68), "Ishtar and Izdubar (1884): Heabani, public domain"),
+    (18, "ISHTAR-EPOS p221 IZDUBAR TAKING LEAVE OF SABITU AND SIDURI IN THE HAPPY HALLS.jpg", (0.0, 0.3, 1.0, 0.68),
+     "Ishtar and Izdubar (1884): Izdubar and Siduri, public domain"),
+    (19, "ISHTAR-EPOS p074 HAND-TO-HAND CONFLICT BETWEEN IZDUBAR AND DIBBARA.jpg", (0.0, 0.3, 1.0, 0.68),
+     "Ishtar and Izdubar (1884): Izdubar's battle, public domain"),
+]
+
+
+def fetch(name, cache):
+    path = os.path.join(cache, name.replace("/", "_"))
+    if os.path.exists(path):
+        return open(path, "rb").read()
+    url = "https://commons.wikimedia.org/wiki/Special:FilePath/" + urllib.parse.quote(name) + "?width=1200"
+    for attempt in range(6):
+        try:
+            data = urllib.request.urlopen(urllib.request.Request(url, headers=UA), timeout=90).read()
+            open(path, "wb").write(data)
+            time.sleep(2)
+            return data
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                time.sleep(15 * (attempt + 1))
+                continue
+            raise
+    raise RuntimeError("couldn't fetch " + name)
+
+
+def convert(data, crop):
+    im = Image.open(io.BytesIO(data)).convert("L")
+    W, H = im.size
+    l, t, r, b = crop
+    im = im.crop((int(l * W), int(t * H), int(r * W), int(b * H)))
+    # fill the card: scale to cover, then centre-crop to the picture area
+    k = max(PW / im.size[0], PH / im.size[1])
+    im = im.resize((max(PW, int(im.size[0] * k + 0.5)), max(PH, int(im.size[1] * k + 0.5))), Image.LANCZOS)
+    x0, y0 = (im.size[0] - PW) // 2, (im.size[1] - PH) // 2
+    im = im.crop((x0, y0, x0 + PW, y0 + PH))
+    im = ImageOps.autocontrast(im, cutoff=1).filter(ImageFilter.SHARPEN)
+    px = list(im.getdata())
+    nib = [min(15, p * 16 // 256) for p in px]
+    return bytes((nib[i] << 4) | nib[i + 1] for i in range(0, len(nib), 2))
+
+
+def main(out, cache):
+    os.makedirs(cache, exist_ok=True)
+    lines = ["#pragma once", "", "#include <stdint.h>", "",
+             "// Public-domain (and CC0) myth illustrations from Wikimedia Commons for the",
+             "// scene cards: 408 x 150, 4-bit greyscale, two pixels per byte, high nibble",
+             "// first, 0 = ink, 15 = paper. Generated by tools/make_cards.py - don't edit.", "",
+             "namespace Gaslight {",
+             f"static const int ENGR_W = {PW}, ENGR_H = {PH};"]
+    table = []
+    for cid, name, crop, credit in CARDS:
+        try:
+            data = convert(fetch(name, cache), crop)
+        except Exception as e:  # keep going: that card falls back to its drawn picture
+            print("skip", name, e)
+            continue
+        lines.append(f"// {credit}")
+        lines.append(f"// Commons: {name}")
+        lines.append(f"static const uint8_t ENGR_{cid}[] = {{")
+        for i in range(0, len(data), 40):
+            lines.append("  " + ",".join(str(v) for v in data[i:i + 40]) + ",")
+        lines.append("};")
+        table.append(cid)
+        print("card", cid, name, len(data))
+    lines.append("// card id -> picture (null: the card draws its own)")
+    lines.append("static const uint8_t *const ENGRAVINGS[24] = {")
+    lines.append("  " + ", ".join(f"ENGR_{i}" if i in table else "nullptr" for i in range(24)) + ",")
+    lines.append("};")
+    lines.append("} // namespace Gaslight")
+    open(out, "w", newline="\n", encoding="utf-8").write("\n".join(lines) + "\n")
+
+
+if __name__ == "__main__":
+    main(sys.argv[1] if len(sys.argv) > 1 else "../Gaslight/Engravings.h",
+         sys.argv[2] if len(sys.argv) > 2 else os.path.join(os.path.dirname(__file__), "_cache"))

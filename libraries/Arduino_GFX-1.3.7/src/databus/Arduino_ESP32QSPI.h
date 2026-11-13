@@ -41,6 +41,7 @@ protected:
 private:
   INLINE void CS_HIGH(void);
   INLINE void CS_LOW(void);
+  bool _pollOk = true; // whether the last POLL_START got the bus (see POLL_END)
   INLINE void POLL_START();
   INLINE void POLL_END();
 

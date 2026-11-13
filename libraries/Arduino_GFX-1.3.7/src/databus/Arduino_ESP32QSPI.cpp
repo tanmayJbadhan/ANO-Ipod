@@ -519,10 +519,19 @@ INLINE void Arduino_ESP32QSPI::CS_LOW(void)
 INLINE void Arduino_ESP32QSPI::POLL_START()
 {
   esp_err_t ret = spi_device_polling_start(_handle, _spi_tran, portMAX_DELAY);
-  // if (ret != ESP_OK)
-  // {
-  //   log_e("spi_device_polling_start error: %d", ret);
-  // }
+  // Jigglypuff: if the start fails, ending the transaction would trip an assert
+  // in the driver and reboot the console; skip the end instead (the pixels are
+  // lost, nothing else) and say why, a few times.
+  _pollOk = ret == ESP_OK;
+  if (!_pollOk)
+  {
+    static int said = 0;
+    if (said < 5)
+    {
+      said++;
+      Serial.printf("QSPI: polling_start failed: %d (%s)\n", (int)ret, esp_err_to_name(ret));
+    }
+  }
 }
 
 /**
@@ -532,6 +541,7 @@ INLINE void Arduino_ESP32QSPI::POLL_START()
  */
 INLINE void Arduino_ESP32QSPI::POLL_END()
 {
+  if (!_pollOk) return; // the start failed: there's nothing to end
   esp_err_t ret = spi_device_polling_end(_handle, portMAX_DELAY);
   // if (ret != ESP_OK)
   // {

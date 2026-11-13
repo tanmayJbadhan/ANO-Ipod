@@ -64,10 +64,20 @@
 #include "Lamplighter.h"
 #include "HalfRes.h"
 #include "Crane.h"
+#include "Gaslight/Gaslight.h"
 #include "WifiConfig.h"
 
-Arduino_DataBus *bus = new Arduino_ESP32QSPI(
-    LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
+// The QSPI bus object holds an 8 KB pixel staging buffer. A plain `new` puts an
+// object that size in PSRAM, which can't do DMA, so the SPI driver would malloc
+// and copy a temporary internal buffer on every transfer - slow, and when internal
+// RAM is fragmented the malloc fails and the driver asserts (a reboot). Build it
+// in internal DMA-capable memory instead, once.
+static Arduino_DataBus *makeBus() {
+  void *mem = heap_caps_malloc(sizeof(Arduino_ESP32QSPI), MALLOC_CAP_DMA | MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (!mem) return new Arduino_ESP32QSPI(LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
+  return new (mem) Arduino_ESP32QSPI(LCD_CS, LCD_SCLK, LCD_SDIO0, LCD_SDIO1, LCD_SDIO2, LCD_SDIO3);
+}
+Arduino_DataBus *bus = makeBus();
 
 Arduino_GFX *panel = new Arduino_CO5300(bus, LCD_RST, 0, false, LCD_WIDTH, LCD_HEIGHT,
                                          20, 0, 0, 0);
@@ -90,7 +100,7 @@ int gamesSel = 0;          // focused tile in Games
 bool gameFailed = false;   // the last game didn't have the memory to start
 
 // The game running inside the Games screen, if any.
-enum class Game : uint8_t { None, Run, Cypress, Tea, Oz, Cat, Thread, Lamp, Fly };
+enum class Game : uint8_t { None, Run, Cypress, Tea, Oz, Cat, Thread, Lamp, Fly, Case };
 Game game = Game::None;
 bool musicActive = false;  // the user wants music playing (drives auto-advance)
 bool needsRedraw = true;
@@ -408,7 +418,7 @@ void drawNowPlaying() {
 // Games menu: one tile per game.
 // Games menu: a row of tiles, three on screen, scrolling to keep the
 // focused one in view.
-static const int GAMES = 8, GAMES_SHOWN = 3;
+static const int GAMES = 9, GAMES_SHOWN = 3;
 static const int16_t GTILE_Y = 54, GTILE_W = 132, GTILE_H = 188, GTILE_GAP = 10;
 int gamesFirst() { return constrain(gamesSel - 1, 0, GAMES - GAMES_SHOWN); }
 int16_t gameSlotX(int slot) { return (int16_t)((SCREEN_W - (GAMES_SHOWN * GTILE_W + (GAMES_SHOWN - 1) * GTILE_GAP)) / 2 + slot * (GTILE_W + GTILE_GAP)); }
@@ -485,6 +495,14 @@ void iconOrbit(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
   gfx->fillTriangle(cx + 30, cy - 28, cx + 16, cy - 26, cx + 26, cy - 16, c); // the Moth
 }
 
+void iconMagnifier(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
+  gfx->fillCircle(cx - 6, cy - 6, 20, c);                       // a detective's glass
+  gfx->fillCircle(cx - 6, cy - 6, 14, cut);
+  gfx->fillCircle(cx - 12, cy - 12, 4, c);                      // its glint
+  for (int i = 0; i < 6; i++) gfx->fillCircle(cx + 10 + i * 3, cy + 10 + i * 3, 5, c); // the handle
+  gfx->fillTriangle(cx + 18, cy - 30, cx + 30, cy - 34, cx + 26, cy - 20, c); // a griffin's feather
+}
+
 void iconOrigami(int16_t cx, int16_t cy, uint16_t c, uint16_t cut) {
   gfx->fillTriangle(cx - 4, cy + 2, cx + 6, cy + 2, cx + 1, cy - 8, c);      // the body
   gfx->fillTriangle(cx - 30, cy - 18, cx - 2, cy + 2, cx - 6, cy - 4, c);    // the wings
@@ -523,9 +541,9 @@ int splitLine(const char *s, char *a, char *b) {
 void drawGames() {
   Glass::background();
   drawStatusBar("< Home");
-  static const char *names[GAMES] = {"Lullaby Run", "Cypress Night", "Late for Tea", "Emerald City", "Cat Nap", "Ariadne", "Lamplighter", "White Heron"};
-  static const char *subs[GAMES] = {"City night racer", "Owls in the garden", "Wonderland dash", "Build Oz", "Don't wake them", "The labyrinth", "Light the stars", "Fly the islands"};
-  const uint16_t tints[GAMES] = {C_BLUE, C_GREEN, C_PINK, Glass::rgb(40, 190, 120), Glass::rgb(190, 110, 230), Glass::rgb(220, 70, 50), Glass::rgb(90, 90, 220), Glass::rgb(230, 120, 90)};
+  static const char *names[GAMES] = {"Lullaby Run", "Cypress Night", "Late for Tea", "Emerald City", "Cat Nap", "Ariadne", "Lamplighter", "White Heron", "Gaslight & Griffins"};
+  static const char *subs[GAMES] = {"City night racer", "Owls in the garden", "Wonderland dash", "Build Oz", "Don't wake them", "The labyrinth", "Light the stars", "Fly the islands", "A detective RPG"};
+  const uint16_t tints[GAMES] = {C_BLUE, C_GREEN, C_PINK, Glass::rgb(40, 190, 120), Glass::rgb(190, 110, 230), Glass::rgb(220, 70, 50), Glass::rgb(90, 90, 220), Glass::rgb(230, 120, 90), Glass::rgb(200, 150, 60)};
   int first = gamesFirst();
   for (int slot = 0; slot < GAMES_SHOWN; slot++) {
     int i = first + slot;
@@ -543,7 +561,8 @@ void drawGames() {
     else if (i == 4) iconCat(cx, iy, C_TEXT, cut);
     else if (i == 5) iconLabyrinth(cx, iy, C_TEXT, cut);
     else if (i == 6) iconOrbit(cx, iy, C_TEXT, cut);
-    else iconOrigami(cx, iy, C_TEXT, cut);
+    else if (i == 7) iconOrigami(cx, iy, C_TEXT, cut);
+    else iconMagnifier(cx, iy, C_TEXT, cut);
     // Name and tagline, both in the big type, each split over two lines
     // when it won't fit on one; stacked up from the tile's foot.
     char nameA[24], nameB[24], subA[24], subB[24];
@@ -644,7 +663,7 @@ bool musicWantsPower() {
   return (musicActive && !MusicPlayer::isPaused()) || LullabyRun::wantsAudioPower() ||
          CypressNight::wantsAudioPower() || LateForTea::wantsAudioPower() || EmeraldCity::wantsAudioPower() ||
          CatNap::wantsAudioPower() || Ariadne::wantsAudioPower() || Lamplighter::wantsAudioPower() ||
-         Crane::wantsAudioPower();
+         Crane::wantsAudioPower() || Gaslight::wantsAudioPower();
 }
 
 // --- whichever game is running ------------------------------------------------
@@ -654,7 +673,8 @@ bool gameActive() {
   return (game == Game::Run && LullabyRun::active()) || (game == Game::Cypress && CypressNight::active()) ||
          (game == Game::Tea && LateForTea::active()) || (game == Game::Oz && EmeraldCity::active()) ||
          (game == Game::Cat && CatNap::active()) || (game == Game::Thread && Ariadne::active()) ||
-         (game == Game::Lamp && Lamplighter::active()) || (game == Game::Fly && Crane::active());
+         (game == Game::Lamp && Lamplighter::active()) || (game == Game::Fly && Crane::active()) ||
+         (game == Game::Case && Gaslight::active());
 }
 
 void gameExit() {
@@ -666,6 +686,7 @@ void gameExit() {
   else if (game == Game::Thread) Ariadne::exit();
   else if (game == Game::Lamp) Lamplighter::exit();
   else if (game == Game::Fly) Crane::exit();
+  else if (game == Game::Case) Gaslight::exit();
   HalfRes::release();
   game = Game::None;
 }
@@ -679,6 +700,7 @@ void gameKey(const InputEvent &ev) {
   else if (game == Game::Thread) Ariadne::key(ev);
   else if (game == Game::Lamp) Lamplighter::key(ev);
   else if (game == Game::Fly) Crane::key(ev);
+  else if (game == Game::Case) Gaslight::key(ev);
 }
 
 void gameFrame(int32_t wheel) {
@@ -690,6 +712,7 @@ void gameFrame(int32_t wheel) {
   else if (game == Game::Thread) Ariadne::frame(input, touch, wheel);
   else if (game == Game::Lamp) Lamplighter::frame(input, touch, wheel);
   else if (game == Game::Fly) Crane::frame(input, touch, wheel);
+  else if (game == Game::Case) Gaslight::frame(input, touch, wheel);
 }
 
 void gamePause() {
@@ -701,13 +724,15 @@ void gamePause() {
   else if (game == Game::Thread) Ariadne::pause();
   else if (game == Game::Lamp) Lamplighter::pause();
   else if (game == Game::Fly) Crane::pause();
+  else if (game == Game::Case) Gaslight::pause();
 }
 
 bool gameWantsExit() {
   return (game == Game::Run && LullabyRun::wantsExit()) || (game == Game::Cypress && CypressNight::wantsExit()) ||
          (game == Game::Tea && LateForTea::wantsExit()) || (game == Game::Oz && EmeraldCity::wantsExit()) ||
          (game == Game::Cat && CatNap::wantsExit()) || (game == Game::Thread && Ariadne::wantsExit()) ||
-         (game == Game::Lamp && Lamplighter::wantsExit()) || (game == Game::Fly && Crane::wantsExit());
+         (game == Game::Lamp && Lamplighter::wantsExit()) || (game == Game::Fly && Crane::wantsExit()) ||
+         (game == Game::Case && Gaslight::wantsExit());
 }
 
 void recoverCodec() {
@@ -793,10 +818,10 @@ void launchGame(int i) {
           : i == 1 ? CypressNight::enter(gfx, panel)
           : i == 2 ? LateForTea::enter(gfx, panel)
           : i == 3 ? EmeraldCity::enter(gfx, panel)
-          : i == 4 ? CatNap::enter(gfx, panel) : i == 5 ? Ariadne::enter(gfx, panel) : i == 6 ? Lamplighter::enter(gfx, panel) : Crane::enter(gfx, panel);
+          : i == 4 ? CatNap::enter(gfx, panel) : i == 5 ? Ariadne::enter(gfx, panel) : i == 6 ? Lamplighter::enter(gfx, panel) : i == 7 ? Crane::enter(gfx, panel) : Gaslight::enter(gfx, panel);
   gameFailed = !ok;
   if (ok) {
-    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : i == 2 ? Game::Tea : i == 3 ? Game::Oz : i == 4 ? Game::Cat : i == 5 ? Game::Thread : i == 6 ? Game::Lamp : Game::Fly;
+    game = i == 0 ? Game::Run : i == 1 ? Game::Cypress : i == 2 ? Game::Tea : i == 3 ? Game::Oz : i == 4 ? Game::Cat : i == 5 ? Game::Thread : i == 6 ? Game::Lamp : i == 7 ? Game::Fly : Game::Case;
     Pcm5122::setMute(false); // a paused track leaves the DAC muted
     powerAudioNow();
   }
@@ -1002,6 +1027,7 @@ void setup() {
   handleWakeFromOff();
   delay(200);
   Serial.println("\nJigglypuff starting...");
+  Serial.printf("Display bus buffer in %s memory\n", esp_ptr_dma_capable(bus) ? "DMA-capable internal" : "PSRAM (slow path)");
 
   pinMode(LCD_EN, OUTPUT);
   digitalWrite(LCD_EN, HIGH);
@@ -1337,6 +1363,7 @@ void serialCommands() {
     if (game == Game::Lamp && gameActive()) { fb = Lamplighter::frameBuffer(); w = 456; h = 280; } // full resolution
     if (!fb) { fb = canvas->getFramebuffer(); w = LCD_WIDTH; h = LCD_HEIGHT; }
     if (game == Game::Fly && gameActive()) { fb = Crane::frameBuffer(); w = 228; h = 140; }
+    if (game == Game::Case && gameActive()) { fb = Gaslight::frameBuffer(); w = 456; h = 280; }
     Serial.printf("\nSHOT %d %d %d\n", w, h, (int)gfx->flipped());
     Serial.write((const uint8_t *)fb, (size_t)w * h * 2);
     Serial.println();
@@ -1348,6 +1375,18 @@ void serialCommands() {
     Ariadne::benchUnlockAll();
   } else if (c == 'Y' && game == Game::Thread) {
     Ariadne::benchPlayAll();
+  } else if (c == 'Z' && game == Game::Case) {
+    Gaslight::benchSkip();
+  } else if (c == 'T' && game == Game::Case) {
+    Gaslight::benchStats();
+  } else if (c == 'M' && game == Game::Case) {
+    Gaslight::benchMem("now");
+  } else if (c == 'N' && game == Game::Case) {
+    Gaslight::benchMusic();
+  } else if (c == 'W' && game == Game::Case) {
+    Gaslight::benchTour();
+  } else if (c == 'Y' && game == Game::Case) {
+    Gaslight::benchBattle();
   } else if (c == 'Z' && game == Game::Fly) {
     Crane::benchAutopilot();
   } else if (c == 'Z' && game == Game::Lamp) {

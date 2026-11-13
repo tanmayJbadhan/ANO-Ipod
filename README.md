@@ -61,6 +61,8 @@ to go back to Home.
 </tr>
 </table>
 
+**Gaslight & Griffins** is the ninth tile: a 3D detective RPG across four towns built on old myths, with partner creatures, deduction, interrogations and four endings.
+
 Rules, stories, controls and more screenshots for each game are in
 [`4_Games/`](4_Games/).
 
@@ -142,7 +144,7 @@ in [`08_BOM/`](08_BOM/).
 | [`1_Examples/`](1_Examples/) | LilyGo's original example sketches for the board. Not part of the console. |
 | [`2_Firmware/`](2_Firmware/) | The main program: screens, menus, buttons, touch, battery and charger, screen sleep, power off. Plus the board's schematic and datasheets. |
 | [`3_Music_App/`](3_Music_App/) | The music library, tag reader, playlists, the Music screens, the player and the PCM5122 DAC driver. Plus the auto-tagger tool. |
-| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea*, *Raise the Emerald City*, *Cat Nap*, *Ariadne's Thread*, *Lamplighter* and *White Heron*, with their drawing, rules and synthesised sound. |
+| [`4_Games/`](4_Games/) | *Lullaby Run*, *Cypress Night*, *Late for Tea*, *Raise the Emerald City*, *Cat Nap*, *Ariadne's Thread*, *Lamplighter*, *White Heron* and *Gaslight & Griffins*, with their drawing, rules and synthesised sound. |
 | [`5_Web_Uploader/`](5_Web_Uploader/) | The phone pages: song upload and the organizer. Also clock sync. |
 | [`6_Theme_Graphics/`](6_Theme_Graphics/) | The glass look, the Jigglypuff-pink theme, the landscape screen rotation and the Home artwork. |
 | [`07_Images/`](07_Images/) | Photos of the console and screenshots from it. |
