@@ -852,6 +852,15 @@ static void enterDoor(int x, int z) {
       if (in.rows[iz][ix] == 'E') { warp(b.dest, ix, iz - 1, F_N); return; }
 }
 
+// A glowing spot of one kind at a tile (1 a story page, 2 a cache in the Wilds), or -1.
+static int glowSpotAt(int x, int z, int kind) {
+  for (int i = 0; i < spotCount(); i++) {
+    const SpotDef &s = spotAt(i);
+    if (s.area == g_area && s.x == x && s.z == z && s.glow == kind && showIfOk(s.showIf)) return i;
+  }
+  return -1;
+}
+
 static bool step(int screenDir) {
   int dir = (screenDir - quarter()) & 3;
   Actor &p = g_player;
@@ -861,6 +870,9 @@ static bool step(int screenDir) {
   if (dir == F_N && buildingAt(nx, nz) >= 0) { enterDoor(nx, nz); return false; }
   // leaving an interior by walking down off the mat
   if (A().indoor && tileAt(g_area, (int)p.x, (int)p.z) == 'E' && dir == F_S) { tryExit((int)p.x, (int)p.z); return false; }
+  // walking into a cache in the Wilds opens it
+  int cache = glowSpotAt(nx, nz, 2);
+  if (cache >= 0) { sfx(RunAudio::Tick); Script::start(spotAt(cache).script); return false; }
   if (!walkable(nx, nz)) return false;
   if (s_followOn) { s_follow.tx = p.x; s_follow.tz = p.z; s_follow.moving = true; }
   p.tx = (float)nx; p.tz = (float)nz;
@@ -871,6 +883,9 @@ static bool step(int screenDir) {
 static void arrive() {
   int x = (int)g_player.x, z = (int)g_player.z;
   if (tryExit(x, z)) return;
+  // stepping onto a glowing story page picks it up
+  int page = glowSpotAt(x, z, 1);
+  if (page >= 0) { Script::start(spotAt(page).script); return; }
   char c = tileAt(g_area, x, z);
   if (c == 'v' && A().encounter && g_nParty > 0 && (rnd() % 100) < 11) {
     int lvl;
@@ -1216,3 +1231,4 @@ void worldOverlay() {
 }
 
 } // namespace Gaslight
+

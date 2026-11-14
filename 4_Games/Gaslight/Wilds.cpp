@@ -214,6 +214,8 @@ void wildsGenerate(int trail, uint32_t seed) {
 #ifdef PC_SIM
   printf("wilds %s seed %u:\n", t.name, (unsigned)seed);
   for (int z = 0; z < WD; z++) printf("  %s\n", s_rows[z]);
+  for (int i = N_TRAILS; i < g_nWildSpots; i++)
+    printf("wildspot %s %d %d glow %d\n", g_wildSpots[i].script, g_wildSpots[i].x, g_wildSpots[i].z, g_wildSpots[i].glow);
 #endif
 }
 

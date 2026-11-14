@@ -235,7 +235,7 @@ A small autoregressive tile network (`GLTiles.h`, trained by `tools/worldmodel/t
   - All four cases solved, with 22 deductions, 14 lies caught and 19 of 20 fragments found.
   - It took about 4.4 million decisions and 105,000 scene starts over 291 different scenes.
   - The Collector's final team was eased from levels 44–48 to 42–45: wild creatures in Ur-Lumen top out at 40.
-- **Memory on the console** (bench keys `M`, `W` = load the next place, `Y` = wild battle):
+- **Memory on the console** (measured with temporary bench keys, since removed):
 
   | Measure | Result |
   |---|---|
@@ -272,7 +272,6 @@ A small autoregressive tile network (`GLTiles.h`, trained by `tools/worldmodel/t
 - **Cost on the console:** under 1 fps.
   - Fogmouth street: 13.5 fps without music, 12.6–13.3 with it.
   - Mrs. Quill's: 18.6 without, 17.5–17.9 with.
-  - Bench key `N` switches the music off and on, for measuring.
 - **Not done yet:** recorded CC-licensed tracks from the SD card for the title and ending screens.
 
 ### Display bus fix (November 2026)

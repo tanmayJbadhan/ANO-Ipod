@@ -281,11 +281,8 @@ uint32_t varsDigest() {
 int varsUsed() { int n = 0; while (n < NVARS && s_vars[n].h) n++; return n; }
 #endif
 // --- music: the piece for wherever Wren is and whatever is happening -------------------------
-static bool s_musicOff = false;
-void benchMusic() { s_musicOff = !s_musicOff; Serial.printf("GG music %s\n", s_musicOff ? "off" : "on"); }
 static int musicFor() {
   using namespace Songs;
-  if (s_musicOff) return -1;
   if (g_mode == Mode::Battle) return battleIsBoss() ? M_BOSS : M_BATTLE;
   if (g_mode == Mode::Ending) return M_FALLS;
   if (UI::active() && (UI::current() == UI::P_INTERRO || UI::current() == UI::P_ACCUSE)) return M_MYSTERY;
@@ -450,55 +447,6 @@ void benchStats() {
   memset(&s_st, 0, sizeof(s_st));
   s_st.on = on;
   s_st.since = millis();
-}
-
-// USB bench: where the memory is. Internal RAM is the scarce kind (the strip
-// buffers, the depth buffer, the vertex cache and the task stacks live there);
-// the textures, meshes, models and saves live in PSRAM.
-void benchMem(const char *tag) {
-#ifndef PC_SIM
-  Serial.printf("GG mem [%s] area %d (%s)  internal free %u min %u largest %u  |  psram free %u min %u largest %u  |  stack left: worker %u loop %u\n",
-                tag, g_area, g_area < A_COUNT ? AREAS[g_area].name : "-",
-                (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
-                (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
-                (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
-                (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM), (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
-                (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM),
-                s_worker ? (unsigned)uxTaskGetStackHighWaterMark(s_worker) : 0u, (unsigned)uxTaskGetStackHighWaterMark(nullptr));
-#else
-  printf("GG mem [%s] area %d\n", tag, g_area);
-#endif
-}
-// USB bench: the next place in turn (the Wilds made fresh), then the memory.
-void benchTour() {
-  static int next = 0;
-  if (g_mode == Mode::Title) { startNew(); g_mode = Mode::World; }
-  int a = next++ % A_COUNT;
-  if (a == A_WILDS) { setVar("town", 3); worldLoad(A_GREEN, 16, 19, F_N); wildsEnter(); }
-  // somewhere to stand: the first open tile from the middle out
-  const AreaDef &d = AREAS[a];
-  int x = d.w / 2, z = d.d / 2;
-  for (int r = 0; r < 20; r++) {
-    bool found = false;
-    for (int dz = -r; dz <= r && !found; dz++)
-      for (int dx = -r; dx <= r && !found; dx++) {
-        int tx = d.w / 2 + dx, tz = d.d / 2 + dz;
-        if (tx < 1 || tz < 1 || tx >= d.w - 1 || tz >= d.d - 1) continue;
-        if (!strchr("~^#LTbBNgwMPRotcKCFYXGOZ", d.rows[tz][tx])) { x = tx; z = tz; found = true; }
-      }
-    if (found) break;
-  }
-  worldLoad(a, x, z, F_S);
-  g_mode = Mode::World;
-  benchMem("tour");
-}
-// USB bench: a wild battle from here, then the memory once it's set up.
-void benchBattle() {
-  if (g_nParty == 0 || g_mode != Mode::World) return; // needs a team, in the world (Z first)
-  int lvl;
-  int sp = wildFor(1 + (int)(esp_random() % 5), lvl);
-  if (sp >= 0) battleWild(sp, lvl);
-  benchMem("battle");
 }
 
 void benchSkip() {

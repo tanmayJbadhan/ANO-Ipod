@@ -26,9 +26,5 @@ bool wantsAudioPower();
 const uint16_t *frameBuffer(); // 456 x 280 RGB565, for screenshots
 void benchStats();             // USB bench: frame timings every 2 s (toggles)
 void benchSkip();              // USB bench: skip ahead through the story (debug)
-void benchMem(const char *tag); // USB bench: internal RAM, PSRAM and stack headroom now
-void benchMusic();             // USB bench: music off / on (to measure what it costs)
-void benchTour();              // USB bench: load the next area in turn, then benchMem
-void benchBattle();            // USB bench: start a wild battle, then benchMem
 
 } // namespace Gaslight

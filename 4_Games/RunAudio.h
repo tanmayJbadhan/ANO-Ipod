@@ -39,7 +39,5 @@ void fx(Fx f);
 // Microseconds spent making sound since the last call (not counting the
 // wait for the DAC to take it) - for bench CPU reports.
 uint32_t takeBusyUs();
-// Bytes of the synth task's stack never used (0 when it isn't running) - for bench reports.
-uint32_t stackLeft();
 
 } // namespace RunAudio

@@ -37,7 +37,6 @@ void fx(Fx f) {
 }
 
 bool running() { return s_run; }
-uint32_t stackLeft() { return s_run && s_task ? (uint32_t)uxTaskGetStackHighWaterMark(s_task) : 0; }
 
 static volatile uint32_t s_busyUs = 0;
 uint32_t takeBusyUs() {

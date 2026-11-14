@@ -1379,14 +1379,6 @@ void serialCommands() {
     Gaslight::benchSkip();
   } else if (c == 'T' && game == Game::Case) {
     Gaslight::benchStats();
-  } else if (c == 'M' && game == Game::Case) {
-    Gaslight::benchMem("now");
-  } else if (c == 'N' && game == Game::Case) {
-    Gaslight::benchMusic();
-  } else if (c == 'W' && game == Game::Case) {
-    Gaslight::benchTour();
-  } else if (c == 'Y' && game == Game::Case) {
-    Gaslight::benchBattle();
   } else if (c == 'Z' && game == Game::Fly) {
     Crane::benchAutopilot();
   } else if (c == 'Z' && game == Game::Lamp) {
