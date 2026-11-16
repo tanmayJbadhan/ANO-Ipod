@@ -102,6 +102,7 @@ static void titleOptions(const char **opt, int &n) {
   n = 0;
   if (s_canContinue) opt[n++] = "Continue the case";
   opt[n++] = "A new case";
+  opt[n++] = "How to play";
   opt[n++] = "Back to the console";
 }
 
@@ -119,7 +120,7 @@ static void startNew() {
 }
 
 static void titleKey(Btn b) {
-  const char *opt[3];
+  const char *opt[4];
   int n;
   titleOptions(opt, n);
   if (b == B_UP) s_titleSel = (s_titleSel + n - 1) % n;
@@ -131,6 +132,8 @@ static void titleKey(Btn b) {
     if (loadGame()) { g_mode = Mode::World; g_fade = 1; UI::toast("The case continues."); }
   } else if (o[0] == 'A') {
     startNew();
+  } else if (o[0] == 'H') {
+    UI::open(UI::P_HELP);
   } else {
     s_exit = true;
   }
@@ -145,17 +148,19 @@ static void titleDraw() {
   textC(F_TITLE, W / 2, y0, "Gaslight & Griffins", mix565(c565(Pal::INK), Col::CREAM, (int)(256 * a)));
   textC(F_SMALL, W / 2, y0 + 46, "A case in four towns and one old story", mix565(c565(Pal::INK), Col::BRASS, (int)(256 * a)));
   if (s_titleT < 1.2f) return;
-  const char *opt[3];
+  const char *opt[4];
   int n;
   titleOptions(opt, n);
+  // a dark band behind the choices, so the dim ones read over a bright street
+  fadeRect(W / 2 - 160, 132, 320, n * 30 + 14, c565(Pal::INK), (uint8_t)(170 * a));
   for (int i = 0; i < n; i++) {
-    int y = 156 + i * 34;
+    int y = 138 + i * 30;
     bool sel = i == s_titleSel;
     int w = textW(F_BOLD, opt[i]) + 36;
-    if (sel) panel(W / 2 - w / 2, y - 3, w, 33, c565(0x2A3442), 210, Col::BRASS);
+    if (sel) panel(W / 2 - w / 2, y - 2, w, 30, c565(0x2A3442), 210, Col::BRASS);
     textC(sel ? F_BOLD : F_BODY, W / 2, y, opt[i], sel ? Col::CREAM : Col::DIM);
   }
-  textC(F_SMALL, W / 2, 256, "Wheel to choose, centre to confirm", Col::DIM);
+  textC(F_SMALL, W / 2, 258, "Wheel to choose, centre to confirm", Col::DIM);
 }
 
 // --- strips ---------------------------------------------------------------------------
@@ -179,7 +184,7 @@ static void drawStrip(int k, uint16_t *land, uint16_t *depth, uint16_t *port) {
   s_sec[cn][0] += t1 - t0;
   Raster::smooth(true);
   switch (g_mode) {
-    case Mode::Title: worldOverlay(); titleDraw(); break;
+    case Mode::Title: worldOverlay(); if (!UI::active()) titleDraw(); break;
     case Mode::World: worldOverlay(); break;
     case Mode::Battle: battleOverlay(); break;
     case Mode::Card:
@@ -189,7 +194,7 @@ static void drawStrip(int k, uint16_t *land, uint16_t *depth, uint16_t *port) {
     Script::draw();
     UI::draw();
     UI::drawToast();
-  }
+  } else if (UI::active()) UI::draw(); // How to play, from the title
   if (g_flash > 0) fadeRect(0, top, W, SH, 0xFFFF, (uint8_t)(clampf(g_flash, 0, 1) * 255));
   if (g_fade > 0) fadeRect(0, top, W, SH, 0, (uint8_t)(clampf(g_fade, 0, 1) * 255));
   Script::drawOver();
@@ -468,7 +473,7 @@ static Btn toBtn(Key k) {
 }
 
 static void dispatch(Btn b) {
-  if (g_mode == Mode::Title) { if (s_titleT > 1.2f) titleKey(b); return; }
+  if (g_mode == Mode::Title && !UI::active()) { if (s_titleT > 1.2f) titleKey(b); return; }
   if (UI::active()) { UI::key(b); return; }
   if (g_mode == Mode::Battle) { if (g_fade < 0.6f) battleKey(b); return; }
   if (Script::active() && Script::blocksWorld()) { Script::key(b); return; }

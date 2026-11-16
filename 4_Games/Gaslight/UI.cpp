@@ -107,8 +107,57 @@ static void moveSel(int d, int n, int rows) {
   if (s_sel >= s_first + rows) s_first = s_sel - rows + 1;
 }
 
-static const char *const PAUSE_OPTS[] = {"Team", "Casebook", "Deduction board", "Bag", "Detective", "Camera distance", "Save", "Back to the title"};
-static const int N_PAUSE = 8;
+static const char *const PAUSE_OPTS[] = {"Hint",   "Team",         "Casebook",        "Deduction board", "Bag",
+                                         "Detective", "How to play", "Camera distance", "Save",            "Back to the title"};
+static const int N_PAUSE = 10;
+
+// --- How to play ---------------------------------------------------------------------------------
+struct HelpPage { const char *title, *body; };
+static const HelpPage HELP[] = {
+    {"The case",
+     "You are Wren Ashby, a young detective. In each of four towns someone has stolen the power of an old myth. "
+     "Talk to people, gather clues, catch the lies, and name who did it. Your partner creature fights beside you."},
+    {"Controls",
+     "Arrows: walk.  Centre: talk, examine, confirm.  Down: back.  "
+     "Centre on empty ground opens the menu.  The wheel turns the camera; drag on the screen to turn or zoom.  "
+     "Walk into glowing caches and onto glowing pages to pick them up."},
+    {"Clues and the board",
+     "Clues you find go in your Casebook. When two clues fit together, join them on the Deduction board: "
+     "pick one clue, then the other. A good link makes a deduction. A wrong one costs a little Composure. "
+     "Each case needs about three deductions before you can accuse."},
+    {"Lies and accusations",
+     "In an interrogation, pick the statement you think is a lie, then show the clue that proves it. "
+     "To accuse, choose who did it, why, how, and the proof. Accuse the wrong person and the case goes badly."},
+    {"Battles",
+     "Choose Fight to use a move, Team to swap creatures, Bag for items, or Run from wild ones. "
+     "Some moves are very effective against some types: the battle tells you. "
+     "Weaken a wild creature, then throw a lantern from the Bag to catch it."},
+    {"Staying strong",
+     "Rest at Mrs. Quill's or a town inn to heal your team. Tall grass hides wild creatures: battling them makes "
+     "your team stronger. Lose a battle and you wake at the inn. Save from the menu."},
+    {"Exploring",
+     "Golden glowing pages are pieces of the old story: twenty to find. Each town's signpost leads to the Wilds, "
+     "new land every visit, with caches to find and an elder creature in its den. "
+     "Ride the train from the conductor to travel between towns."},
+    {"Stuck?",
+     "Open the menu and choose Hint. It looks at where you are in the story and tells you what to do next."},
+};
+static const int N_HELP = sizeof(HELP) / sizeof(HELP[0]);
+
+// Two clues in hand that the board would join (a deduction waiting to be made).
+bool linkWaiting() {
+  for (int l = 0; l < N_LINKS; l++) {
+    if (hasDeduction(LINKS[l].deduction)) continue;
+    int a = clueIndex(LINKS[l].a), b = clueIndex(LINKS[l].b);
+    if (a >= 0 && b >= 0 && hasClue(a) && hasClue(b)) return true;
+  }
+  return false;
+}
+
+void hint() {
+  setVar("hint_link", linkWaiting() ? 1 : 0);
+  Script::start("hint");
+}
 
 static void boardTry(int a, int b) {
   const char *ia = CLUES[a].id, *ib = CLUES[b].id;
@@ -155,18 +204,20 @@ void key(Btn b) {
   switch (s_p) {
     case P_PAUSE:
       if (b == NEXT && false) {}
-      if (b == B_UP) moveSel(-1, N_PAUSE, 8);
-      else if (b == NEXT) moveSel(1, N_PAUSE, 8);
+      if (b == B_UP) moveSel(-1, N_PAUSE, 10);
+      else if (b == NEXT) moveSel(1, N_PAUSE, 10);
       else if (b == B_OK) {
         switch (s_sel) {
-          case 0: open(P_TEAM); s_fromScript = false; s_fromPause = true; break;
-          case 1: open(P_CASEBOOK); s_fromScript = false; s_fromPause = true; break;
-          case 2: open(P_BOARD); s_fromScript = false; s_fromPause = true; break;
-          case 3: open(P_BAG); s_fromScript = false; s_fromPause = true; break;
-          case 4: open(P_SKILLS); s_fromScript = false; s_fromPause = true; break;
-          case 5: worldCameraToggle(); close(); break;
-          case 6: toast(saveGame() ? "The case is saved." : "Couldn't save!"); close(); break;
-          case 7: s_p = P_NONE; g_mode = Mode::Title; g_fade = 1; break;
+          case 0: close(); hint(); break;
+          case 1: open(P_TEAM); s_fromScript = false; s_fromPause = true; break;
+          case 2: open(P_CASEBOOK); s_fromScript = false; s_fromPause = true; break;
+          case 3: open(P_BOARD); s_fromScript = false; s_fromPause = true; break;
+          case 4: open(P_BAG); s_fromScript = false; s_fromPause = true; break;
+          case 5: open(P_SKILLS); s_fromScript = false; s_fromPause = true; break;
+          case 6: open(P_HELP); s_fromScript = false; s_fromPause = true; break;
+          case 7: worldCameraToggle(); close(); break;
+          case 8: toast(saveGame() ? "The case is saved." : "Couldn't save!"); close(); break;
+          case 9: s_p = P_NONE; g_mode = Mode::Title; g_fade = 1; break;
         }
       }
       break;
@@ -207,6 +258,11 @@ void key(Btn b) {
     }
     case P_SKILLS:
       if (b == NEXT || b == B_LEFT || b == B_OK) close();
+      break;
+    case P_HELP:
+      // Right or Centre: the next page (closing after the last); Up or Left: the one before
+      if (b == NEXT || b == B_OK) { if (s_sel + 1 < N_HELP) s_sel++; else back(); }
+      else if (b == B_UP || b == B_LEFT) { if (s_sel > 0) s_sel--; }
       break;
     case P_CASEBOOK:
       if (b == B_UP) moveSel(-1, s_nList, 7);
@@ -293,7 +349,8 @@ void key(Btn b) {
 
 void wheel(int d) {
   switch (s_p) {
-    case P_PAUSE: moveSel(d, N_PAUSE, 8); break;
+    case P_PAUSE: moveSel(d, N_PAUSE, 10); break;
+    case P_HELP: s_sel = clampi(s_sel + d, 0, N_HELP - 1); break;
     case P_TEAM: moveSel(d, g_nParty, 6); break;
     case P_BAG: moveSel(d, I_COUNT, 7); break;
     case P_CASEBOOK: moveSel(d, s_nList, 7); break;
@@ -347,12 +404,13 @@ static void hpBar(float x, float y, float w, float frac) {
 }
 
 static void drawPause() {
-  int x = W - 236, y = 6, h = 12 + N_PAUSE * 32;
+  const int RH = 26;
+  int x = W - 236, y = 4, h = 8 + N_PAUSE * RH;
   panel(x, y, 228, h, c565(0x161A22), 236, Col::BRASS);
   for (int i = 0; i < N_PAUSE; i++) {
     bool sel = i == s_sel;
-    if (sel) Raster::roundRect(x + 6, y + 6 + i * 32, 216, 30, 6, c565(0x34302A));
-    fit(sel ? F_BOLD : F_BODY, x + 14, y + 8 + i * 32, 204, PAUSE_OPTS[i], sel ? Col::AMBER : Col::CREAM);
+    if (sel) Raster::roundRect(x + 6, y + 4 + i * RH, 216, RH, 6, c565(0x34302A));
+    fit(F_BODY, x + 14, y + 4 + i * RH, 204, PAUSE_OPTS[i], sel ? Col::AMBER : i == 0 ? c565(0xA8D8F0) : Col::CREAM);
   }
   // a few facts down the left
   panel(8, 46, 200, 124, c565(0x161A22), 220, Col::BRASS);
@@ -433,6 +491,18 @@ static void drawBag() {
   char m[40];
   snprintf(m, sizeof(m), "Shillings: %d", g_money);
   text(F_BODY, 244, 236, m, Col::BRASS);
+}
+
+static void drawHelp() {
+  const HelpPage &p = HELP[s_sel];
+  panel(10, 8, W - 20, H - 16, c565(0x161A22), 244, Col::BRASS);
+  text(F_SMALL, 24, 16, "How to play", Col::DIM);
+  char pg[24];
+  snprintf(pg, sizeof(pg), "%d / %d", s_sel + 1, N_HELP);
+  text(F_SMALL, W - 24 - textW(F_SMALL, pg), 16, pg, Col::DIM);
+  text(F_BOLD, 24, 40, p.title, Col::AMBER);
+  wrap(F_SMALL, 24, 76, W - 48, p.body, Col::CREAM, Col::AMBER, 22, 8);
+  textC(F_SMALL, W / 2, H - 36, s_sel + 1 < N_HELP ? "Right: next    Up: back a page    Down: close" : "Centre or Down: close", Col::DIM);
 }
 
 static void drawSkills() {
@@ -612,6 +682,7 @@ void draw() {
     case P_TEAM: drawTeam(); break;
     case P_BAG: drawBag(); break;
     case P_SKILLS: drawSkills(); break;
+    case P_HELP: drawHelp(); break;
     case P_CASEBOOK: drawCasebook(); break;
     case P_BOARD: drawBoard(); break;
     case P_ACCUSE: drawAccuse(); break;
@@ -633,14 +704,7 @@ void drawToast() {
 #ifdef PC_SIM
 // --- the playtest bot's hand in the panels ------------------------------------------------------
 static int s_botA = -1, s_botB = -1;
-bool botLinkAvailable() {
-  for (int l = 0; l < N_LINKS; l++) {
-    if (hasDeduction(LINKS[l].deduction)) continue;
-    int a = clueIndex(LINKS[l].a), b = clueIndex(LINKS[l].b);
-    if (a >= 0 && b >= 0 && hasClue(a) && hasClue(b)) return true;
-  }
-  return false;
-}
+bool botLinkAvailable() { return linkWaiting(); }
 static Btn botMoveTo(int target, int cur) { return target > cur ? NEXT : B_UP; }
 Btn botKey() {
   if (s_noteT > 0) { s_noteT = 0; return B_NONE; }
@@ -693,7 +757,7 @@ Btn botKey() {
     case P_PAUSE:
       // the board, when there's a connection waiting to be made
       if (!botLinkAvailable()) return B_DOWN;
-      if (s_sel != 2) return s_sel < 2 ? NEXT : B_UP;
+      if (s_sel != 3) return s_sel < 3 ? NEXT : B_UP;
       return B_OK;
     default: return B_DOWN;
   }

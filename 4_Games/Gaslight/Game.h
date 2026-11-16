@@ -222,7 +222,7 @@ extern const int N_ACCUSES;
 // The story script (Story.cpp): one big text, run by Script.cpp.
 extern const char *const STORY;
 extern const char *const STORY_PARTS[];
-extern const char *const STORY_SAND, *const STORY_GREEN, *const STORY_SKJOLD, *const STORY_UR, *const STORY_WILDS;
+extern const char *const STORY_SAND, *const STORY_GREEN, *const STORY_SKJOLD, *const STORY_UR, *const STORY_WILDS, *const STORY_HINTS;
 extern const int N_STORY_PARTS;
 
 // --- modes and screens ---------------------------------------------------------------
@@ -274,10 +274,12 @@ int wildFor(int table, int &lvl);
 // menus and detective panels (UI.cpp)
 namespace UI {
 enum Panel : uint8_t { P_NONE, P_PAUSE, P_TEAM, P_BAG, P_CASEBOOK, P_BOARD, P_ACCUSE, P_INTERRO, P_SKILLS, P_SAVE,
-                       P_OBSERVE, P_MAP };
+                       P_OBSERVE, P_MAP, P_HELP };
 void open(Panel p, const char *arg = nullptr);
 bool active();
 Panel current();
+bool linkWaiting();      // two clues held that the board would join
+void hint();             // what to do next, from where the story is
 void update(float dt);
 void key(Btn b);
 void wheel(int d);

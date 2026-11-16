@@ -919,11 +919,16 @@ sirens: SAIL WELL, SMALL ONE. WE WILL SING YOU HOME.
 @warp lodge 6 4 N
 @fade in
 ? sirens_freed #act1_end
+? sirens_lost #act1_quiet
 @end
 
+#act1_quiet
+lune(3): You came back from the Rock. The Sisters are quiet. I think they'll stay quiet now.
+@goto act1_tablet
 #act1_end
 lune: You came back from the Rock. And the Sisters are singing again. Listen.
 -: Faint, through the fog: three voices, singing 'turn back' to the ships, the way they always did.
+#act1_tablet
 lune: That tablet of Crewe's. I've read it. It's the first line of the oldest story there is.
 lune: "He who saw the deep." The Epic of Gilgamesh. A king who lost his friend, and went looking for a way to never die.
 juno(3): I heard. Good work, apprentice. My father's men will take Crewe to the capital.
@@ -991,7 +996,8 @@ extern const char *const STORY_GREEN;
 extern const char *const STORY_SKJOLD;
 extern const char *const STORY_UR;
 extern const char *const STORY_WILDS;
-const char *const STORY_PARTS[] = {STORY, STORY_SAND, STORY_GREEN, STORY_SKJOLD, STORY_UR, STORY_WILDS};
+extern const char *const STORY_HINTS;
+const char *const STORY_PARTS[] = {STORY, STORY_SAND, STORY_GREEN, STORY_SKJOLD, STORY_UR, STORY_WILDS, STORY_HINTS};
 const int N_STORY_PARTS = sizeof(STORY_PARTS) / sizeof(STORY_PARTS[0]);
 
 // --- scene cards --------------------------------------------------------------------------------------

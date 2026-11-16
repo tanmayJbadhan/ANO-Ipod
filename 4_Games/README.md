@@ -68,6 +68,8 @@ There are 62 species. A small trained model gives every wild creature its own co
 - **Centre:** talk, examine, confirm. On empty ground it opens the menu, which also has the camera's close/far switch.
 - **Down:** back, in menus.
 
+**Stuck?** Choose **Hint** at the top of the menu: it looks at where you are in the story and says what to do next. **How to play** (on the title screen and in the menu) explains the controls, clues, interrogations, battles and exploring.
+
 It draws at full resolution in 3D on both cores. Each place's ground is painted into a texture when you arrive. The myth scene cards use public-domain engravings; see [`Gaslight/CREDITS.md`](Gaslight/CREDITS.md). The design is in [`Gaslight/DESIGN.md`](Gaslight/DESIGN.md) and the technical plan in [`Gaslight/TECH.md`](Gaslight/TECH.md).
 
 | File | What's in it |
